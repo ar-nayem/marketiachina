@@ -2,7 +2,7 @@ const express = require('express');
 const crypto = require('node:crypto');
 const { db } = require('../db');
 const { resolveSession } = require('../lib/session');
-const { attachCustomerIfPresent } = require('../middleware/requireAuth');
+const { requireAuth, attachCustomerIfPresent } = require('../middleware/requireAuth');
 const { sendMail } = require('../lib/mailer');
 const { renderInvoiceHtml } = require('../lib/invoice');
 
@@ -200,6 +200,35 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
     invoiceUrl: `/api/orders/${order.id}/invoice?t=${order.access_token}`,
     whatsappUrl,
   });
+});
+
+router.get('/', requireAuth, (req, res) => {
+  const orders = db
+    .prepare(`SELECT * FROM orders WHERE customer_id = ? ORDER BY created_at DESC`)
+    .all(req.customer.id);
+  const itemsStmt = db.prepare(`SELECT * FROM order_items WHERE order_id = ? ORDER BY id ASC`);
+
+  const result = orders.map((o) => ({
+    id: o.id,
+    orderNumber: o.order_number,
+    status: o.status,
+    createdAt: o.created_at,
+    shippingMethod: o.shipping_method,
+    paymentMethod: o.payment_method,
+    subtotalBDT: o.subtotal_bdt,
+    shippingFeeBDT: o.shipping_fee_bdt,
+    totalBDT: o.total_bdt,
+    invoiceUrl: `/api/orders/${o.id}/invoice?t=${o.access_token}`,
+    items: itemsStmt.all(o.id).map((li) => ({
+      productId: li.product_id,
+      name: li.product_name_snapshot,
+      unitPriceBDT: li.unit_price_bdt,
+      quantity: li.quantity,
+      lineTotalBDT: li.line_total_bdt,
+    })),
+  }));
+
+  res.json({ orders: result });
 });
 
 router.get('/:id/invoice', (req, res) => {

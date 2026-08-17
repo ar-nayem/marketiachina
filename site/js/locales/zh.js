@@ -302,6 +302,18 @@ export const zh = {
     accountMemberSince: "注册于",
     accountOrdersTitle: "您的订单",
     accountNoOrders: "您还没有任何订单。",
-    accountLogoutConfirm: "确定要退出登录吗？"
+    accountLogoutConfirm: "确定要退出登录吗？",
+    accountOrdersLoadError: "无法加载您的订单，请重试。",
+    accountOrderDate: "下单时间",
+    accountOrderItems: "件商品",
+    accountOrderTotal: "总计",
+    accountViewInvoice: "查看发票",
+    accountStatus: {
+      pending: "待处理",
+      confirmed: "已确认",
+      shipped: "已发货",
+      delivered: "已送达",
+      cancelled: "已取消"
+    }
   }
 };

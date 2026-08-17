@@ -302,6 +302,18 @@ export const en = {
     accountMemberSince: "Member since",
     accountOrdersTitle: "Your Orders",
     accountNoOrders: "You haven't placed any orders yet.",
-    accountLogoutConfirm: "Log out of your account?"
+    accountLogoutConfirm: "Log out of your account?",
+    accountOrdersLoadError: "Couldn't load your orders. Please try again.",
+    accountOrderDate: "Placed on",
+    accountOrderItems: "items",
+    accountOrderTotal: "Total",
+    accountViewInvoice: "View Invoice",
+    accountStatus: {
+      pending: "Pending",
+      confirmed: "Confirmed",
+      shipped: "Shipped",
+      delivered: "Delivered",
+      cancelled: "Cancelled"
+    }
   }
 };

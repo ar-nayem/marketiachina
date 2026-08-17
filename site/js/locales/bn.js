@@ -302,6 +302,18 @@ export const bn = {
     accountMemberSince: "সদস্য হয়েছেন",
     accountOrdersTitle: "আপনার অর্ডারসমূহ",
     accountNoOrders: "আপনি এখনো কোনো অর্ডার করেননি।",
-    accountLogoutConfirm: "অ্যাকাউন্ট থেকে লগআউট করবেন?"
+    accountLogoutConfirm: "অ্যাকাউন্ট থেকে লগআউট করবেন?",
+    accountOrdersLoadError: "আপনার অর্ডার লোড করা যায়নি। আবার চেষ্টা করুন।",
+    accountOrderDate: "অর্ডার করেছেন",
+    accountOrderItems: "টি পণ্য",
+    accountOrderTotal: "মোট",
+    accountViewInvoice: "ইনভয়েস দেখুন",
+    accountStatus: {
+      pending: "পেন্ডিং",
+      confirmed: "কনফার্ম হয়েছে",
+      shipped: "শিপড",
+      delivered: "ডেলিভারড",
+      cancelled: "বাতিল হয়েছে"
+    }
   }
 };

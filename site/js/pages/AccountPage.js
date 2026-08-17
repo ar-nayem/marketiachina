@@ -19,6 +19,8 @@ function localeForLang(lang) {
 export class AccountPage {
   constructor(rootElement) {
     this.root = rootElement;
+    this.orders = null;
+    this.ordersError = false;
     this.renderLoading();
     this.init();
   }
@@ -47,8 +49,21 @@ export class AccountPage {
       return;
     }
 
+    await this.loadOrders();
     this.render();
     this.setupListeners();
+  }
+
+  async loadOrders() {
+    try {
+      const res = await fetch('/api/orders');
+      if (!res.ok) throw new Error('Failed to load orders');
+      const data = await res.json();
+      this.orders = data.orders;
+    } catch (err) {
+      this.orders = null;
+      this.ordersError = true;
+    }
   }
 
   renderHeader() {
@@ -98,8 +113,49 @@ export class AccountPage {
 
           <div class="account-section">
             <h2>${t.auth.accountOrdersTitle}</h2>
-            <div class="account-empty-state">${t.auth.accountNoOrders}</div>
+            ${this.renderOrdersSection()}
           </div>
+        </div>
+      </div>
+    `;
+  }
+
+  renderOrdersSection() {
+    const t = langState.t;
+
+    if (this.ordersError) {
+      return `<div class="account-empty-state">${t.auth.accountOrdersLoadError}</div>`;
+    }
+    if (!this.orders || this.orders.length === 0) {
+      return `<div class="account-empty-state">${t.auth.accountNoOrders}</div>`;
+    }
+
+    const locale = localeForLang(langState.lang);
+    return `<div class="order-list">${this.orders.map((o) => this.renderOrderCard(o, t, locale)).join('')}</div>`;
+  }
+
+  renderOrderCard(o, t, locale) {
+    const parsedDate = new Date(o.createdAt);
+    const dateStr = Number.isNaN(parsedDate.getTime())
+      ? o.createdAt
+      : parsedDate.toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' });
+    const statusLabel = t.auth.accountStatus[o.status] || o.status;
+    const totalQuantity = o.items.reduce((sum, item) => sum + item.quantity, 0);
+    const itemsSummary = o.items.map((item) => `${item.name} × ${item.quantity}`).join(', ');
+
+    return `
+      <div class="order-card">
+        <div class="order-card-top">
+          <div>
+            <div class="order-card-number">${o.orderNumber}</div>
+            <div class="order-card-date">${t.auth.accountOrderDate} ${dateStr}</div>
+          </div>
+          <span class="order-status-badge order-status-${o.status}">${statusLabel}</span>
+        </div>
+        <div class="order-card-items">${itemsSummary} — ${totalQuantity} ${t.auth.accountOrderItems}</div>
+        <div class="order-card-bottom">
+          <div class="order-card-total">${t.auth.accountOrderTotal}: ৳${o.totalBDT.toLocaleString()}</div>
+          <a href="${o.invoiceUrl}" target="_blank" rel="noopener" class="btn-secondary order-card-invoice-link">${t.auth.accountViewInvoice}</a>
         </div>
       </div>
     `;
