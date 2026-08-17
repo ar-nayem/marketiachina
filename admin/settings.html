@@ -29,75 +29,121 @@
       escapeHtml
     } from '/admin/js/adminShell.js';
 
-    function fmtRate(n) {
-      if (n === null || n === undefined || Number.isNaN(Number(n))) return '—';
-      return Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
-    }
+    const RATE_FIELDS = [
+      { key: 'usdToBdt', label: 'USD → BDT rate', step: '0.01' },
+      { key: 'cnyToBdt', label: 'CNY → BDT rate', step: '0.01' },
+      { key: 'airBdtPerKg', label: 'Air freight (BDT/kg)', step: '1' },
+      { key: 'seaBdtPerKg', label: 'Sea freight (BDT/kg)', step: '1' },
+      { key: 'cartAirFactor', label: 'Cart air multiplier', step: '0.01' },
+      { key: 'cartSeaFactor', label: 'Cart sea multiplier', step: '0.01' },
+      { key: 'portFeeBdt', label: 'Port fee (BDT)', step: '1' }
+    ];
 
-    function fmtPercent(n) {
-      if (n === null || n === undefined || Number.isNaN(Number(n))) return '—';
-      const pct = Number(n) * 100;
-      return (Number.isInteger(pct) ? pct : pct.toFixed(1)) + '%';
+    let dutyRowCount = 0;
+
+    function dutyRowHtml(label, ratePercent) {
+      const idx = dutyRowCount++;
+      return `
+        <tr data-duty-row="${idx}">
+          <td><input class="form-input" type="text" data-duty-label value="${escapeHtml(label ?? '')}" placeholder="Category name" /></td>
+          <td style="display:flex;align-items:center;gap:8px;">
+            <input class="form-input" type="number" step="0.1" data-duty-rate value="${escapeHtml(String(ratePercent ?? ''))}" style="max-width:110px;" />
+            <span style="color:var(--text-muted);">%</span>
+            <button type="button" class="btn-icon" data-remove-duty title="Remove">✕</button>
+          </td>
+        </tr>
+      `;
     }
 
     function renderShippingRates(rates) {
       const wrap = document.getElementById('shipping-rates-display');
-      if (!rates) {
-        wrap.innerHTML = `<div class="admin-table-empty">No shipping rate configuration found.</div>`;
-        return;
-      }
+      const r = rates || {};
 
-      const items = [
-        { label: 'USD → BDT rate', value: fmtRate(rates.usdToBdt) },
-        { label: 'CNY → BDT rate', value: fmtRate(rates.cnyToBdt) },
-        { label: 'Air freight (BDT/kg)', value: fmtRate(rates.airBdtPerKg) },
-        { label: 'Sea freight (BDT/kg)', value: fmtRate(rates.seaBdtPerKg) },
-        { label: 'Cart air multiplier', value: fmtRate(rates.cartAirFactor) },
-        { label: 'Cart sea multiplier', value: fmtRate(rates.cartSeaFactor) },
-        { label: 'Port fee (BDT)', value: fmtRate(rates.portFeeBdt) }
-      ];
-
-      const grid = items
-        .map(
-          (item) => `
+      const fields = RATE_FIELDS.map(
+        (f) => `
         <div>
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin-bottom:4px;">${escapeHtml(
-            item.label
-          )}</div>
-          <div style="font-size:16px;font-weight:800;color:var(--text-primary);">${escapeHtml(item.value)}</div>
+          <label class="form-label" for="rate-${f.key}">${escapeHtml(f.label)}</label>
+          <input class="form-input" type="number" step="${f.step}" id="rate-${f.key}" value="${escapeHtml(r[f.key] ?? '')}" />
         </div>
       `
-        )
-        .join('');
+      ).join('');
 
-      const duties = Array.isArray(rates.dutyCategories) ? rates.dutyCategories : [];
+      const duties = Array.isArray(r.dutyCategories) ? r.dutyCategories : [];
+      dutyRowCount = 0;
       const dutyRows = duties.length
-        ? duties
-            .map(
-              (d) => `
-          <tr>
-            <td>${escapeHtml(d.label)}</td>
-            <td>${fmtPercent(d.rate)}</td>
-          </tr>
-        `
-            )
-            .join('')
-        : `<tr><td colspan="2" class="admin-table-empty">No duty categories configured.</td></tr>`;
+        ? duties.map((d) => dutyRowHtml(d.label, d.rate !== undefined && d.rate !== null ? Number(d.rate) * 100 : '')).join('')
+        : '';
 
       wrap.innerHTML = `
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:20px;padding:20px;">
-          ${grid}
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px;padding:20px;">
+          ${fields}
         </div>
         <div style="padding:0 20px 20px 20px;">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin-bottom:8px;">Duty Categories</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);">Duty Categories</div>
+            <button type="button" class="btn-secondary" id="add-duty-row" style="padding:4px 12px;font-size:13px;">+ Add Category</button>
+          </div>
           <div class="admin-table-wrap" style="border:1px solid var(--border-color);border-radius:var(--radius-sm);">
             <table class="admin-table">
               <thead><tr><th>Category</th><th>Duty Rate</th></tr></thead>
-              <tbody>${dutyRows}</tbody>
+              <tbody id="duty-rows-body">${dutyRows}</tbody>
             </table>
           </div>
         </div>
+        <div style="padding:0 20px 20px 20px;display:flex;align-items:center;gap:14px;">
+          <button type="button" class="btn-primary" id="save-rates-btn">Save Shipping Rates</button>
+          <span id="rates-save-status" style="font-size:13px;color:var(--text-muted);"></span>
+        </div>
       `;
+
+      document.getElementById('add-duty-row').addEventListener('click', () => {
+        document.getElementById('duty-rows-body').insertAdjacentHTML('beforeend', dutyRowHtml('', ''));
+      });
+      wrap.addEventListener('click', (evt) => {
+        if (evt.target.matches('[data-remove-duty]')) {
+          evt.target.closest('tr').remove();
+        }
+      });
+      document.getElementById('save-rates-btn').addEventListener('click', handleSaveRates);
+    }
+
+    function readShippingRatesForm() {
+      const rates = {};
+      for (const f of RATE_FIELDS) {
+        const val = document.getElementById(`rate-${f.key}`).value;
+        rates[f.key] = val === '' ? null : Number(val);
+      }
+      rates.dutyCategories = Array.from(document.querySelectorAll('#duty-rows-body tr'))
+        .map((row) => {
+          const label = row.querySelector('[data-duty-label]').value.trim();
+          const ratePercent = row.querySelector('[data-duty-rate]').value;
+          if (!label || ratePercent === '') return null;
+          return { label, rate: Number(ratePercent) / 100 };
+        })
+        .filter(Boolean);
+      return rates;
+    }
+
+    async function handleSaveRates() {
+      const btn = document.getElementById('save-rates-btn');
+      const status = document.getElementById('rates-save-status');
+      const shippingRates = readShippingRatesForm();
+
+      btn.disabled = true;
+      status.style.color = 'var(--text-muted)';
+      status.textContent = 'Saving…';
+      try {
+        await apiFetch('/api/admin/settings', {
+          method: 'PUT',
+          body: JSON.stringify({ shippingRates })
+        });
+        status.textContent = 'Saved.';
+      } catch (err) {
+        status.style.color = 'var(--mc-china-red)';
+        status.textContent = `Failed to save: ${err.message}`;
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     function setStatus(message, isError) {
@@ -185,10 +231,9 @@
                 </div>
               </form>
 
-              <div class="admin-panel" style="max-width:640px;margin-top:24px;opacity:0.6;">
+              <div class="admin-panel" style="max-width:640px;margin-top:24px;">
                 <div class="admin-panel-header">
                   <h2>Shipping &amp; Duty Rates</h2>
-                  <span class="admin-badge admin-badge-gold">Coming Soon</span>
                 </div>
                 <div id="shipping-rates-display">
                   <div class="admin-table-empty">Loading…</div>
