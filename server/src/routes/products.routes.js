@@ -1,0 +1,77 @@
+const express = require('express');
+const { db } = require('../db');
+
+const router = express.Router();
+
+// Builds the exact nested Product shape documented in the API contract from a
+// products row plus its related product_specs / product_wholesale_tiers rows.
+function buildProduct(row, specRows, tierRows) {
+  const specs = { bn: [], en: [], zh: [] };
+  for (const s of specRows) {
+    if (specs[s.lang]) specs[s.lang].push({ label: s.label, value: s.value });
+  }
+
+  const wholesaleTiers = tierRows.map((t) => ({
+    min: t.min_qty,
+    max: t.max_qty,
+    priceBDT: t.price_bdt,
+    priceUSD: t.price_usd,
+    priceCNY: t.price_cny,
+    discount: t.discount_label
+  }));
+
+  return {
+    id: row.id,
+    category: row.category,
+    image: row.image,
+    model3dType: row.model_3d_type,
+    isFeatured: !!row.is_featured,
+    isFactoryDirect: !!row.is_factory_direct,
+    rating: row.rating,
+    reviewsCount: row.reviews_count,
+    priceBDT: row.price_bdt,
+    priceUSD: row.price_usd,
+    priceCNY: row.price_cny,
+    moq: row.moq,
+    originCity: row.origin_city,
+    shippingMethods: row.shipping_methods ? JSON.parse(row.shipping_methods) : [],
+    leadTimeAir: row.lead_time_air,
+    leadTimeSea: row.lead_time_sea,
+    wholesaleTiers,
+    name: { bn: row.name_bn, en: row.name_en, zh: row.name_zh },
+    tagline: { bn: row.tagline_bn, en: row.tagline_en, zh: row.tagline_zh },
+    description: { bn: row.description_bn, en: row.description_en, zh: row.description_zh },
+    specs
+  };
+}
+
+function getSpecRows(productId) {
+  return db
+    .prepare(`SELECT lang, label, value FROM product_specs WHERE product_id = ? ORDER BY sort_order ASC`)
+    .all(productId);
+}
+
+function getTierRows(productId) {
+  return db
+    .prepare(
+      `SELECT min_qty, max_qty, price_bdt, price_usd, price_cny, discount_label FROM product_wholesale_tiers WHERE product_id = ? ORDER BY sort_order ASC`
+    )
+    .all(productId);
+}
+
+function loadFullProduct(row) {
+  return buildProduct(row, getSpecRows(row.id), getTierRows(row.id));
+}
+
+router.get('/', (req, res) => {
+  const rows = db.prepare(`SELECT * FROM products WHERE is_active = 1 ORDER BY rowid ASC`).all();
+  res.json({ products: rows.map(loadFullProduct) });
+});
+
+router.get('/:id', (req, res) => {
+  const row = db.prepare(`SELECT * FROM products WHERE id = ? AND is_active = 1`).get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Product not found.' });
+  res.json({ product: loadFullProduct(row) });
+});
+
+module.exports = router;

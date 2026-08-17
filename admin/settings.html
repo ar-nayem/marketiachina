@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings | Marketia China Admin</title>
+  <meta name="robots" content="noindex, nofollow" />
+
+  <!-- Tailwind CSS (locally built, no CDN dependency at runtime) -->
+  <link rel="stylesheet" href="../css/tailwind.build.css" />
+
+  <!-- Marketia China Design System Stylesheets -->
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/glass.css" />
+  <link rel="stylesheet" href="../css/components.css" />
+
+  <!-- Admin control panel layout -->
+  <link rel="stylesheet" href="css/admin.css" />
+</head>
+<body>
+  <div id="admin-root"></div>
+
+  <script type="module">
+    import {
+      apiFetch,
+      requireAdminAuth,
+      renderSidebar,
+      wireLogout,
+      escapeHtml
+    } from '/admin/js/adminShell.js';
+
+    function fmtRate(n) {
+      if (n === null || n === undefined || Number.isNaN(Number(n))) return '—';
+      return Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
+    }
+
+    function fmtPercent(n) {
+      if (n === null || n === undefined || Number.isNaN(Number(n))) return '—';
+      const pct = Number(n) * 100;
+      return (Number.isInteger(pct) ? pct : pct.toFixed(1)) + '%';
+    }
+
+    function renderShippingRates(rates) {
+      const wrap = document.getElementById('shipping-rates-display');
+      if (!rates) {
+        wrap.innerHTML = `<div class="admin-table-empty">No shipping rate configuration found.</div>`;
+        return;
+      }
+
+      const items = [
+        { label: 'USD → BDT rate', value: fmtRate(rates.usdToBdt) },
+        { label: 'CNY → BDT rate', value: fmtRate(rates.cnyToBdt) },
+        { label: 'Air freight (BDT/kg)', value: fmtRate(rates.airBdtPerKg) },
+        { label: 'Sea freight (BDT/kg)', value: fmtRate(rates.seaBdtPerKg) },
+        { label: 'Cart air multiplier', value: fmtRate(rates.cartAirFactor) },
+        { label: 'Cart sea multiplier', value: fmtRate(rates.cartSeaFactor) },
+        { label: 'Port fee (BDT)', value: fmtRate(rates.portFeeBdt) }
+      ];
+
+      const grid = items
+        .map(
+          (item) => `
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin-bottom:4px;">${escapeHtml(
+            item.label
+          )}</div>
+          <div style="font-size:16px;font-weight:800;color:var(--text-primary);">${escapeHtml(item.value)}</div>
+        </div>
+      `
+        )
+        .join('');
+
+      const duties = Array.isArray(rates.dutyCategories) ? rates.dutyCategories : [];
+      const dutyRows = duties.length
+        ? duties
+            .map(
+              (d) => `
+          <tr>
+            <td>${escapeHtml(d.label)}</td>
+            <td>${fmtPercent(d.rate)}</td>
+          </tr>
+        `
+            )
+            .join('')
+        : `<tr><td colspan="2" class="admin-table-empty">No duty categories configured.</td></tr>`;
+
+      wrap.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:20px;padding:20px;">
+          ${grid}
+        </div>
+        <div style="padding:0 20px 20px 20px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin-bottom:8px;">Duty Categories</div>
+          <div class="admin-table-wrap" style="border:1px solid var(--border-color);border-radius:var(--radius-sm);">
+            <table class="admin-table">
+              <thead><tr><th>Category</th><th>Duty Rate</th></tr></thead>
+              <tbody>${dutyRows}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function setStatus(message, isError) {
+      const el = document.getElementById('settings-save-status');
+      el.textContent = message;
+      el.style.color = isError ? 'var(--mc-china-red)' : 'var(--text-muted)';
+    }
+
+    async function loadSettings() {
+      try {
+        const data = await apiFetch('/api/admin/settings');
+        document.getElementById('businessName').value = data.businessName || '';
+        document.getElementById('logoUrl').value = data.logoUrl || '';
+        document.getElementById('whatsappNumber').value = data.whatsappNumber || '';
+        document.getElementById('contactEmail').value = data.contactEmail || '';
+        renderShippingRates(data.shippingRates);
+      } catch (err) {
+        setStatus(`Failed to load settings: ${err.message}`, true);
+        document.getElementById('shipping-rates-display').innerHTML = `<div class="admin-table-empty">Failed to load shipping rates.</div>`;
+      }
+    }
+
+    async function handleSubmit(evt) {
+      evt.preventDefault();
+      const btn = document.getElementById('save-settings-btn');
+      const payload = {
+        businessName: document.getElementById('businessName').value.trim(),
+        logoUrl: document.getElementById('logoUrl').value.trim(),
+        whatsappNumber: document.getElementById('whatsappNumber').value.trim(),
+        contactEmail: document.getElementById('contactEmail').value.trim()
+      };
+
+      btn.disabled = true;
+      setStatus('Saving…', false);
+      try {
+        await apiFetch('/api/admin/settings', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+        setStatus('Saved.', false);
+      } catch (err) {
+        setStatus(`Failed to save: ${err.message}`, true);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+
+      document.getElementById('admin-root').innerHTML = `
+        <div class="admin-shell">
+          ${renderSidebar('settings', admin)}
+          <div class="admin-main">
+            <div class="admin-topbar">
+              <h1>Settings</h1>
+            </div>
+            <div class="admin-content">
+              <form id="settings-form" class="admin-panel" style="max-width:640px;">
+                <div class="admin-panel-header">
+                  <h2>Business Details</h2>
+                </div>
+                <div style="padding:20px;display:flex;flex-direction:column;gap:18px;">
+                  <div>
+                    <label class="form-label" for="businessName">Business Name</label>
+                    <input class="form-input" type="text" id="businessName" name="businessName" required />
+                  </div>
+                  <div>
+                    <label class="form-label" for="logoUrl">Logo URL</label>
+                    <input class="form-input" type="text" id="logoUrl" name="logoUrl" placeholder="https://…" />
+                  </div>
+                  <div>
+                    <label class="form-label" for="whatsappNumber">WhatsApp Number</label>
+                    <input class="form-input" type="text" id="whatsappNumber" name="whatsappNumber" placeholder="8801XXXXXXXXX" />
+                  </div>
+                  <div>
+                    <label class="form-label" for="contactEmail">Contact Email</label>
+                    <input class="form-input" type="email" id="contactEmail" name="contactEmail" />
+                  </div>
+                  <div style="display:flex;align-items:center;gap:14px;">
+                    <button type="submit" class="btn-primary" id="save-settings-btn">Save Changes</button>
+                    <span id="settings-save-status" style="font-size:13px;color:var(--text-muted);"></span>
+                  </div>
+                </div>
+              </form>
+
+              <div class="admin-panel" style="max-width:640px;margin-top:24px;opacity:0.6;">
+                <div class="admin-panel-header">
+                  <h2>Shipping &amp; Duty Rates</h2>
+                  <span class="admin-badge admin-badge-gold">Coming Soon</span>
+                </div>
+                <div id="shipping-rates-display">
+                  <div class="admin-table-empty">Loading…</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      wireLogout();
+      document.getElementById('settings-form').addEventListener('submit', handleSubmit);
+
+      await loadSettings();
+    }
+
+    init();
+  </script>
+</body>
+</html>

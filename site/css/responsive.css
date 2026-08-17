@@ -1,0 +1,103 @@
+/* Marketia China - Responsive Styles */
+
+@media (max-width: 1024px) {
+  .hero-grid {
+    grid-template-columns: 1fr !important;
+    text-align: center;
+    gap: 40px !important;
+  }
+  
+  .hero-content {
+    order: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .hero-canvas-container {
+    order: 1;
+    height: 420px !important;
+  }
+
+  .nav-desktop-menu {
+    display: none !important;
+  }
+
+  .nav-mobile-toggle {
+    display: flex !important;
+  }
+
+  .logistics-timeline {
+    flex-direction: column !important;
+    gap: 30px !important;
+  }
+
+  .logistics-connector {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .container, .container-wide {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .hero-canvas-container {
+    height: 340px !important;
+  }
+
+  .hero-title {
+    font-size: 2.4rem !important;
+  }
+
+  .hero-description {
+    font-size: 1rem !important;
+  }
+
+  .hero-cta-group {
+    flex-direction: column;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .hero-cta-group .btn-primary,
+  .hero-cta-group .btn-secondary {
+    width: 100%;
+  }
+
+  .products-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .shipping-cards-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .trust-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr !important;
+    gap: 36px !important;
+  }
+
+  .cart-drawer {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 2rem !important;
+  }
+
+  .trust-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .lang-switcher-btn span {
+    display: none;
+  }
+}

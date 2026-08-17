@@ -1,0 +1,208 @@
+/* Marketia China - Global Design System & Variables */
+@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* Brand Core Colors (Non-negotiable) */
+  --mc-china-red: #DE2910;
+  --mc-china-red-hover: #C2200B;
+  --mc-china-red-light: rgba(222, 41, 16, 0.08);
+  --mc-china-red-glow: rgba(222, 41, 16, 0.35);
+  
+  --mc-gold: #C9A227;
+  --mc-gold-hover: #B59020;
+  --mc-gold-light: rgba(201, 162, 39, 0.12);
+  --mc-gold-glow: rgba(201, 162, 39, 0.3);
+
+  /* Light Theme (Default) */
+  --bg-primary: #FAF7F2;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #F3EFE9;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #FFFDF9;
+  
+  --text-primary: #222222;
+  --text-secondary: #555555;
+  --text-muted: #888888;
+  --text-inverse: #FFFFFF;
+  
+  --border-color: #E5E5E5;
+  --border-light: rgba(34, 34, 34, 0.06);
+  --border-focus: #DE2910;
+  
+  --shadow-sm: 0 2px 8px rgba(34, 34, 34, 0.04);
+  --shadow-md: 0 8px 24px rgba(34, 34, 34, 0.06);
+  --shadow-lg: 0 16px 40px rgba(34, 34, 34, 0.09);
+  --shadow-glow: 0 0 30px rgba(222, 41, 16, 0.15);
+
+  --nav-bg: rgba(250, 247, 242, 0.82);
+  --nav-border: rgba(34, 34, 34, 0.06);
+  
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(34, 34, 34, 0.07);
+  --glass-shadow: 0 10px 40px rgba(34, 34, 34, 0.06);
+
+  --badge-bg: rgba(222, 41, 16, 0.08);
+  --badge-text: #DE2910;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+
+  --transition-smooth: all 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Dark Theme */
+[data-theme="dark"] {
+  --bg-primary: #111111;
+  --bg-secondary: #1A1A1A;
+  --bg-tertiary: #1F1F1F;
+  --bg-card: #222222;
+  --bg-card-hover: #2A2A2A;
+  
+  --text-primary: #FFFFFF;
+  --text-secondary: #CFCFCF;
+  --text-muted: #888888;
+  --text-inverse: #111111;
+  
+  --border-color: #333333;
+  --border-light: rgba(255, 255, 255, 0.08);
+  --border-focus: #DE2910;
+  
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 35px rgba(222, 41, 16, 0.28);
+
+  --nav-bg: rgba(17, 17, 17, 0.85);
+  --nav-border: rgba(255, 255, 255, 0.08);
+  
+  --glass-bg: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+
+  --badge-bg: rgba(222, 41, 16, 0.18);
+  --badge-text: #FF6650;
+}
+
+/* Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+  overflow-x: hidden;
+  transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+}
+
+/* Language specific typography */
+html[lang="bn"] body,
+.font-bengali {
+  font-family: 'Hind Siliguri', 'Plus Jakarta Sans', sans-serif !important;
+}
+
+html[lang="zh-CN"] body,
+html[lang="zh"] body,
+.font-chinese {
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
+}
+
+html[lang="en"] body,
+.font-english {
+  font-family: 'Plus Jakarta Sans', 'Manrope', 'Inter', sans-serif !important;
+}
+
+/* Global scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--mc-china-red);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mc-china-red-hover);
+}
+
+/* Selection */
+::selection {
+  background: var(--mc-china-red);
+  color: #FFFFFF;
+}
+
+/* Utility Layout Classes */
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.container-wide {
+  width: 100%;
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+/* Typography styles */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+p {
+  color: var(--text-secondary);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: var(--transition-smooth);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  background: none;
+  transition: var(--transition-smooth);
+}
+
+/* Accessibility Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mail Outbox | Marketia China Admin</title>
+  <meta name="robots" content="noindex, nofollow" />
+
+  <!-- Tailwind CSS (locally built, no CDN dependency at runtime) -->
+  <link rel="stylesheet" href="../css/tailwind.build.css" />
+
+  <!-- Marketia China Design System Stylesheets -->
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/glass.css" />
+  <link rel="stylesheet" href="../css/components.css" />
+
+  <!-- Admin control panel layout -->
+  <link rel="stylesheet" href="css/admin.css" />
+
+  <style>
+    /* Scoped to this page only: the shared .modal-overlay class is z-index:999,
+       which would sit above .admin-slideover (z-index:60). Here the overlay is
+       only ever used as this page's slideover backdrop, so it must sit just
+       beneath it. */
+    #outbox-backdrop.modal-overlay {
+      z-index: 55;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="admin-root"></div>
+
+  <script type="module">
+    import {
+      apiFetch,
+      requireAdminAuth,
+      renderSidebar,
+      wireLogout,
+      escapeHtml,
+      formatDate
+    } from '/admin/js/adminShell.js';
+
+    const KIND_BADGE_CLASS = {
+      invoice: 'admin-badge-gold',
+      password_reset: 'admin-badge-red',
+      welcome: 'admin-badge-neutral'
+    };
+
+    let emailsData = [];
+
+    function kindBadge(kind) {
+      const cls = KIND_BADGE_CLASS[kind] || 'admin-badge-neutral';
+      const label = (kind || '—').replace(/_/g, ' ');
+      return `<span class="admin-badge ${cls}">${escapeHtml(label)}</span>`;
+    }
+
+    function renderRows() {
+      const tbody = document.getElementById('outbox-tbody');
+      if (!emailsData.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty">No emails logged yet.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = emailsData
+        .map(
+          (email, i) => `
+        <tr>
+          <td>${escapeHtml(email.toEmail)}</td>
+          <td>${escapeHtml(email.subject)}</td>
+          <td>${kindBadge(email.kind)}</td>
+          <td>${formatDate(email.createdAt)}</td>
+          <td style="text-align:right;">
+            <button class="btn-secondary text-xs" data-view-idx="${i}">View</button>
+          </td>
+        </tr>
+      `
+        )
+        .join('');
+    }
+
+    function openPreview(email) {
+      document.getElementById('outbox-preview-to').textContent = email.toEmail || '';
+      document.getElementById('outbox-preview-subject').textContent = email.subject || '';
+      document.getElementById('outbox-preview-iframe').srcdoc = email.htmlBody || '';
+      document.getElementById('outbox-backdrop').classList.add('open');
+      document.getElementById('outbox-slideover').classList.add('open');
+    }
+
+    function closePreview() {
+      document.getElementById('outbox-backdrop').classList.remove('open');
+      document.getElementById('outbox-slideover').classList.remove('open');
+    }
+
+    async function loadOutbox() {
+      const tbody = document.getElementById('outbox-tbody');
+      try {
+        const data = await apiFetch('/api/admin/outbox');
+        emailsData = data.emails || [];
+        renderRows();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty">Failed to load outbox: ${escapeHtml(
+          err.message
+        )}</td></tr>`;
+      }
+    }
+
+    async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+
+      document.getElementById('admin-root').innerHTML = `
+        <div class="admin-shell">
+          ${renderSidebar('outbox', admin)}
+          <div class="admin-main">
+            <div class="admin-topbar">
+              <h1>Mail Outbox</h1>
+            </div>
+            <div class="admin-content">
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">
+                Emails are logged here in development mode. Connect real SMTP credentials later to send them for real.
+              </p>
+              <div class="admin-panel">
+                <div class="admin-panel-header">
+                  <h2>Sent Emails</h2>
+                </div>
+                <div class="admin-table-wrap">
+                  <table class="admin-table">
+                    <thead>
+                      <tr>
+                        <th>To</th>
+                        <th>Subject</th>
+                        <th>Kind</th>
+                        <th>Date</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="outbox-tbody">
+                      <tr><td colspan="5" class="admin-table-empty">Loading…</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-overlay" id="outbox-backdrop"></div>
+        <aside class="admin-slideover" id="outbox-slideover">
+          <div class="admin-slideover-header">
+            <h2 style="font-size:15px;font-weight:800;">Email Preview</h2>
+            <button class="admin-icon-btn" id="outbox-close-btn" aria-label="Close preview">✕</button>
+          </div>
+          <div class="admin-slideover-body" style="padding:0;gap:0;">
+            <div style="padding:16px 24px;border-bottom:1px solid var(--border-color);font-size:13px;color:var(--text-secondary);display:flex;flex-direction:column;gap:6px;">
+              <div><strong style="color:var(--text-primary);">To:</strong> <span id="outbox-preview-to"></span></div>
+              <div><strong style="color:var(--text-primary);">Subject:</strong> <span id="outbox-preview-subject"></span></div>
+            </div>
+            <iframe
+              id="outbox-preview-iframe"
+              title="Email preview"
+              sandbox=""
+              style="border:0;width:100%;flex:1;min-height:520px;background:#fff;"
+            ></iframe>
+          </div>
+        </aside>
+      `;
+
+      wireLogout();
+
+      document.getElementById('outbox-tbody').addEventListener('click', (evt) => {
+        const btn = evt.target.closest('[data-view-idx]');
+        if (!btn) return;
+        const email = emailsData[Number(btn.dataset.viewIdx)];
+        if (email) openPreview(email);
+      });
+
+      document.getElementById('outbox-close-btn').addEventListener('click', closePreview);
+      document.getElementById('outbox-backdrop').addEventListener('click', closePreview);
+
+      await loadOutbox();
+    }
+
+    init();
+  </script>
+</body>
+</html>

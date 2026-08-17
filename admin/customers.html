@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Customers | Marketia China Admin</title>
+  <meta name="robots" content="noindex, nofollow" />
+
+  <!-- Tailwind CSS (locally built, no CDN dependency at runtime) -->
+  <link rel="stylesheet" href="../css/tailwind.build.css" />
+
+  <!-- Marketia China Design System Stylesheets -->
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/glass.css" />
+  <link rel="stylesheet" href="../css/components.css" />
+
+  <!-- Admin control panel layout -->
+  <link rel="stylesheet" href="css/admin.css" />
+</head>
+<body>
+  <div id="admin-root"></div>
+
+  <script type="module">
+    import {
+      apiFetch,
+      requireAdminAuth,
+      renderSidebar,
+      wireLogout,
+      escapeHtml,
+      formatDate
+    } from '/admin/js/adminShell.js';
+
+    function renderRows(customers) {
+      const tbody = document.getElementById('customers-tbody');
+      if (!customers.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="admin-table-empty">No customers yet.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = customers
+        .map(
+          (c) => `
+        <tr>
+          <td>${escapeHtml(c.name) || '<span style="color:var(--text-muted)">—</span>'}</td>
+          <td>${escapeHtml(c.email) || '<span style="color:var(--text-muted)">—</span>'}</td>
+          <td>${escapeHtml(c.phone) || '<span style="color:var(--text-muted)">—</span>'}</td>
+          <td>${c.orderCount ?? 0}</td>
+          <td>${formatDate(c.createdAt)}</td>
+          <td style="text-align:right;">
+            <a href="/admin/orders.html" class="btn-secondary text-xs" style="display:inline-flex;">View Orders</a>
+          </td>
+        </tr>
+      `
+        )
+        .join('');
+    }
+
+    async function loadCustomers() {
+      const tbody = document.getElementById('customers-tbody');
+      try {
+        const data = await apiFetch('/api/admin/customers');
+        renderRows(data.customers || []);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="admin-table-empty">Failed to load customers: ${escapeHtml(
+          err.message
+        )}</td></tr>`;
+      }
+    }
+
+    async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+
+      document.getElementById('admin-root').innerHTML = `
+        <div class="admin-shell">
+          ${renderSidebar('customers', admin)}
+          <div class="admin-main">
+            <div class="admin-topbar">
+              <h1>Customers</h1>
+            </div>
+            <div class="admin-content">
+              <div class="admin-panel">
+                <div class="admin-panel-header">
+                  <h2>All Customers</h2>
+                </div>
+                <div class="admin-table-wrap">
+                  <table class="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Orders</th>
+                        <th>Joined</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="customers-tbody">
+                      <tr><td colspan="6" class="admin-table-empty">Loading…</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      wireLogout();
+      await loadCustomers();
+    }
+
+    init();
+  </script>
+</body>
+</html>

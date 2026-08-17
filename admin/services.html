@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Services | Marketia China Admin</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/tailwind.build.css" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/glass.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+  <link rel="stylesheet" href="/admin/css/admin.css" />
+
+  <style>
+    /* Page-specific hand-authored CSS (no reliance on unproven Tailwind utility classes) */
+    .admin-form-section-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--mc-china-red);
+      padding-top: 14px;
+      margin-top: 4px;
+      border-top: 1px solid var(--border-color);
+    }
+    .admin-form-section-title.first {
+      border-top: none;
+      padding-top: 0;
+      margin-top: 0;
+    }
+    .admin-form-row {
+      display: flex;
+      gap: 12px;
+    }
+    .admin-form-row > div {
+      flex: 1;
+      min-width: 0;
+    }
+    .admin-checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .admin-checkbox-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--mc-china-red);
+    }
+    .admin-checkbox-row label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    textarea.form-input {
+      min-height: 90px;
+      resize: vertical;
+    }
+    textarea.admin-json {
+      font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    textarea.admin-prose {
+      font-family: inherit;
+      font-size: 0.9rem;
+      min-height: 120px;
+    }
+    .admin-field-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .admin-field-error {
+      color: var(--mc-china-red);
+      font-size: 12px;
+      margin-top: 4px;
+      min-height: 14px;
+    }
+    .admin-inline-banner {
+      display: none;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .admin-inline-banner.show { display: block; }
+    .admin-inline-banner.error { background: var(--mc-china-red-light); color: var(--mc-china-red); }
+    .admin-inline-banner.success { background: rgba(16, 163, 74, 0.12); color: #10A34A; }
+    .admin-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      padding: 12px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      z-index: 200;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+    .admin-toast.show { opacity: 1; transform: translateY(0); }
+    .admin-table td code {
+      background: var(--bg-tertiary);
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+    }
+    @media (max-width: 640px) {
+      .admin-form-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-shell" id="admin-shell">
+    <div class="admin-main">
+      <div class="admin-topbar">
+        <h1>Services</h1>
+      </div>
+      <div class="admin-content">
+        <div class="admin-panel">
+          <div id="admin-banner" class="admin-inline-banner"></div>
+          <div class="admin-panel-header">
+            <h2>All Services</h2>
+            <button id="add-service-btn" class="btn-primary" type="button">+ Add Service</button>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Icon</th>
+                  <th>Title</th>
+                  <th>Slug</th>
+                  <th>Status</th>
+                  <th>Sort Order</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="services-tbody">
+                <tr><td colspan="6"><div class="admin-table-empty">Loading services…</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide-over backdrop (reuses storefront .modal-overlay) -->
+  <div class="modal-overlay" id="slideover-overlay"></div>
+
+  <!-- Service create/edit slide-over -->
+  <div class="admin-slideover" id="service-slideover">
+    <div class="admin-slideover-header">
+      <h2 id="slideover-title">Add Service</h2>
+      <button class="admin-icon-btn" id="slideover-close" type="button" title="Close">✕</button>
+    </div>
+    <div class="admin-slideover-body">
+      <form id="service-form">
+        <div class="admin-form-section-title first">Basic Info</div>
+        <div>
+          <label class="form-label">Slug</label>
+          <input class="form-input" id="f-slug" type="text" placeholder="e.g. air-freight" />
+          <div class="admin-field-hint">Used in the service detail page URL. Cannot be changed after creation.</div>
+          <div class="admin-field-error" id="err-slug"></div>
+        </div>
+        <div>
+          <label class="form-label">Icon (emoji)</label>
+          <input class="form-input" id="f-icon" type="text" placeholder="e.g. ✈️" maxlength="8" />
+        </div>
+        <div>
+          <label class="form-label">Accent Color</label>
+          <input class="form-input" id="f-accentColor" type="text" placeholder="#DE2910" list="accent-color-options" />
+          <datalist id="accent-color-options">
+            <option value="#DE2910">China Red</option>
+            <option value="#C9A227">Gold</option>
+          </datalist>
+        </div>
+        <div class="admin-checkbox-row">
+          <input type="checkbox" id="f-isActive" checked />
+          <label for="f-isActive">Active (visible on storefront)</label>
+        </div>
+        <div>
+          <label class="form-label">Sort Order</label>
+          <input class="form-input" id="f-sortOrder" type="number" step="1" min="0" />
+        </div>
+
+        <div class="admin-form-section-title">Title</div>
+        <div>
+          <label class="form-label">Title (Bengali)</label>
+          <input class="form-input" id="f-title-bn" type="text" />
+        </div>
+        <div>
+          <label class="form-label">Title (English)</label>
+          <input class="form-input" id="f-title-en" type="text" />
+        </div>
+        <div>
+          <label class="form-label">Title (Chinese)</label>
+          <input class="form-input" id="f-title-zh" type="text" />
+        </div>
+
+        <div class="admin-form-section-title">Tagline</div>
+        <div>
+          <label class="form-label">Tagline (Bengali)</label>
+          <input class="form-input" id="f-tagline-bn" type="text" />
+        </div>
+        <div>
+          <label class="form-label">Tagline (English)</label>
+          <input class="form-input" id="f-tagline-en" type="text" />
+        </div>
+        <div>
+          <label class="form-label">Tagline (Chinese)</label>
+          <input class="form-input" id="f-tagline-zh" type="text" />
+        </div>
+
+        <div class="admin-form-section-title">Body</div>
+        <div>
+          <label class="form-label">Body (Bengali)</label>
+          <textarea class="form-input admin-prose" id="f-body-bn" placeholder="Separate paragraphs with a blank line (press Enter twice)."></textarea>
+        </div>
+        <div>
+          <label class="form-label">Body (English)</label>
+          <textarea class="form-input admin-prose" id="f-body-en" placeholder="Separate paragraphs with a blank line (press Enter twice)."></textarea>
+        </div>
+        <div>
+          <label class="form-label">Body (Chinese)</label>
+          <textarea class="form-input admin-prose" id="f-body-zh" placeholder="Separate paragraphs with a blank line (press Enter twice)."></textarea>
+        </div>
+
+        <div class="admin-form-section-title">Highlights (JSON)</div>
+        <div>
+          <label class="form-label">Highlights (Bengali)</label>
+          <textarea class="form-input admin-json" id="f-highlights-bn" placeholder='["Point one", "Point two"]'></textarea>
+          <div class="admin-field-hint">Array of strings.</div>
+          <div class="admin-field-error" id="err-highlights-bn"></div>
+        </div>
+        <div>
+          <label class="form-label">Highlights (English)</label>
+          <textarea class="form-input admin-json" id="f-highlights-en" placeholder='["Point one", "Point two"]'></textarea>
+          <div class="admin-field-hint">Array of strings.</div>
+          <div class="admin-field-error" id="err-highlights-en"></div>
+        </div>
+        <div>
+          <label class="form-label">Highlights (Chinese)</label>
+          <textarea class="form-input admin-json" id="f-highlights-zh" placeholder='["Point one", "Point two"]'></textarea>
+          <div class="admin-field-hint">Array of strings.</div>
+          <div class="admin-field-error" id="err-highlights-zh"></div>
+        </div>
+
+        <div class="admin-form-section-title">Call to Action Label</div>
+        <div>
+          <label class="form-label">CTA Label (Bengali)</label>
+          <input class="form-input" id="f-cta-bn" type="text" />
+        </div>
+        <div>
+          <label class="form-label">CTA Label (English)</label>
+          <input class="form-input" id="f-cta-en" type="text" />
+        </div>
+        <div>
+          <label class="form-label">CTA Label (Chinese)</label>
+          <input class="form-input" id="f-cta-zh" type="text" />
+        </div>
+      </form>
+    </div>
+    <div class="admin-slideover-footer">
+      <button class="btn-secondary" id="slideover-cancel" type="button">Cancel</button>
+      <button class="btn-primary" id="slideover-save" type="submit" form="service-form">Save Service</button>
+    </div>
+  </div>
+
+  <div class="admin-toast" id="admin-toast"></div>
+
+  <script type="module">
+    import { apiFetch, requireAdminAuth, renderSidebar, wireLogout, escapeHtml } from './js/adminShell.js';
+
+    let services = [];
+    let editingId = null;
+
+    function renderTable() {
+      const tbody = document.getElementById('services-tbody');
+      if (!services.length) {
+        tbody.innerHTML = '<tr><td colspan="6"><div class="admin-table-empty">No services yet. Click "Add Service" to create one.</div></td></tr>';
+        return;
+      }
+      const sorted = services.slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      tbody.innerHTML = sorted.map(s => {
+        const titleEn = (s.title && s.title.en) || '';
+        const badge = s.isActive
+          ? '<span class="admin-badge admin-badge-green">Active</span>'
+          : '<span class="admin-badge admin-badge-neutral">Inactive</span>';
+        return `
+          <tr>
+            <td style="font-size:20px;">${escapeHtml(s.icon || '')}</td>
+            <td>${escapeHtml(titleEn)}</td>
+            <td><code>${escapeHtml(s.slug)}</code></td>
+            <td>${badge}</td>
+            <td>${escapeHtml(s.sortOrder !== undefined && s.sortOrder !== null ? s.sortOrder : '')}</td>
+            <td>
+              <div class="admin-row-actions">
+                <button class="admin-icon-btn edit-btn" data-id="${escapeHtml(s.id)}" title="Edit">✏️</button>
+                <button class="admin-icon-btn delete-btn" data-id="${escapeHtml(s.id)}" title="Delete">🗑️</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      tbody.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', () => openEdit(btn.dataset.id)));
+      tbody.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', () => handleDelete(btn.dataset.id)));
+    }
+
+    async function loadServices() {
+      try {
+        const data = await apiFetch('/api/admin/services');
+        services = data.services || [];
+        renderTable();
+      } catch (err) {
+        showBanner(err.message, 'error');
+      }
+    }
+
+    const overlay = document.getElementById('slideover-overlay');
+    const slideover = document.getElementById('service-slideover');
+
+    function openSlideover() {
+      overlay.classList.add('open');
+      slideover.classList.add('open');
+    }
+    function closeSlideover() {
+      overlay.classList.remove('open');
+      slideover.classList.remove('open');
+      editingId = null;
+    }
+    overlay.addEventListener('click', closeSlideover);
+    document.getElementById('slideover-close').addEventListener('click', closeSlideover);
+    document.getElementById('slideover-cancel').addEventListener('click', closeSlideover);
+
+    function fillForm(s) {
+      const f = id => document.getElementById(id);
+      f('f-slug').value = s ? (s.slug || '') : '';
+      f('f-slug').readOnly = !!s;
+      f('f-icon').value = s ? (s.icon || '') : '';
+      f('f-accentColor').value = s ? (s.accentColor || '') : '#DE2910';
+      f('f-isActive').checked = s ? !!s.isActive : true;
+      f('f-sortOrder').value = s && s.sortOrder !== undefined && s.sortOrder !== null ? s.sortOrder : (services.length + 1);
+      ['bn', 'en', 'zh'].forEach(lang => {
+        f(`f-title-${lang}`).value = (s && s.title && s.title[lang]) || '';
+        f(`f-tagline-${lang}`).value = (s && s.tagline && s.tagline[lang]) || '';
+        f(`f-body-${lang}`).value = (s && s.body && s.body[lang]) || '';
+        f(`f-highlights-${lang}`).value = JSON.stringify((s && s.highlights && s.highlights[lang]) || [], null, 2);
+        f(`f-cta-${lang}`).value = (s && s.ctaLabel && s.ctaLabel[lang]) || '';
+      });
+    }
+
+    function clearFieldErrors() {
+      document.querySelectorAll('.admin-field-error').forEach(el => { el.textContent = ''; });
+    }
+    function setFieldError(id, msg) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = msg || '';
+    }
+
+    function openCreate() {
+      editingId = null;
+      document.getElementById('slideover-title').textContent = 'Add Service';
+      clearFieldErrors();
+      fillForm(null);
+      openSlideover();
+    }
+
+    function openEdit(id) {
+      const s = services.find(x => String(x.id) === String(id));
+      if (!s) return;
+      editingId = s.id;
+      document.getElementById('slideover-title').textContent = 'Edit Service';
+      clearFieldErrors();
+      fillForm(s);
+      openSlideover();
+    }
+
+    function collectPayload() {
+      clearFieldErrors();
+      let ok = true;
+      const f = id => document.getElementById(id);
+
+      const parseJsonField = (fieldId, errId, fallback) => {
+        const raw = f(fieldId).value.trim();
+        if (!raw) return fallback;
+        try {
+          return JSON.parse(raw);
+        } catch (e) {
+          setFieldError(errId, 'Invalid JSON: ' + e.message);
+          ok = false;
+          return fallback;
+        }
+      };
+
+      const highlightsBn = parseJsonField('f-highlights-bn', 'err-highlights-bn', []);
+      const highlightsEn = parseJsonField('f-highlights-en', 'err-highlights-en', []);
+      const highlightsZh = parseJsonField('f-highlights-zh', 'err-highlights-zh', []);
+
+      const slug = f('f-slug').value.trim();
+      if (!slug) {
+        setFieldError('err-slug', 'Slug is required');
+        ok = false;
+      }
+
+      if (!ok) return null;
+
+      return {
+        slug,
+        icon: f('f-icon').value.trim(),
+        accentColor: f('f-accentColor').value.trim() || '#DE2910',
+        isActive: f('f-isActive').checked,
+        sortOrder: parseInt(f('f-sortOrder').value, 10) || 0,
+        title: { bn: f('f-title-bn').value.trim(), en: f('f-title-en').value.trim(), zh: f('f-title-zh').value.trim() },
+        tagline: { bn: f('f-tagline-bn').value.trim(), en: f('f-tagline-en').value.trim(), zh: f('f-tagline-zh').value.trim() },
+        body: { bn: f('f-body-bn').value.trim(), en: f('f-body-en').value.trim(), zh: f('f-body-zh').value.trim() },
+        highlights: { bn: highlightsBn, en: highlightsEn, zh: highlightsZh },
+        ctaLabel: { bn: f('f-cta-bn').value.trim(), en: f('f-cta-en').value.trim(), zh: f('f-cta-zh').value.trim() }
+      };
+    }
+
+    document.getElementById('service-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = collectPayload();
+      if (!payload) return;
+      const saveBtn = document.getElementById('slideover-save');
+      saveBtn.disabled = true;
+      try {
+        if (editingId) {
+          await apiFetch(`/api/admin/services/${encodeURIComponent(editingId)}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+          });
+        } else {
+          await apiFetch('/api/admin/services', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+        }
+        closeSlideover();
+        showToast(editingId ? 'Service updated' : 'Service created');
+        await loadServices();
+      } catch (err) {
+        showBanner(err.message, 'error');
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    async function handleDelete(id) {
+      if (!confirm('Delete this service? It will be hidden from the storefront. You can reactivate it later by editing it and checking "Active".')) return;
+      try {
+        await apiFetch(`/api/admin/services/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        showToast('Service deleted');
+        await loadServices();
+      } catch (err) {
+        showBanner(err.message, 'error');
+      }
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('admin-toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    let bannerTimer = null;
+    function showBanner(msg, type) {
+      const el = document.getElementById('admin-banner');
+      el.textContent = msg;
+      el.className = `admin-inline-banner show ${type || 'error'}`;
+      clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(() => el.classList.remove('show'), 5000);
+    }
+
+    (async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+      document.getElementById('admin-shell').insertAdjacentHTML('afterbegin', renderSidebar('services', admin));
+      wireLogout();
+      document.getElementById('add-service-btn').addEventListener('click', openCreate);
+      await loadServices();
+    })();
+  </script>
+</body>
+</html>

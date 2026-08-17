@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard | Marketia China Control Panel</title>
+<meta name="robots" content="noindex, nofollow" />
+
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="stylesheet" href="/css/components.css" />
+<link rel="stylesheet" href="/admin/css/admin.css" />
+
+<style>
+  .admin-dashboard-panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 980px) {
+    .admin-dashboard-panels {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .admin-panel-link {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--mc-china-red);
+  }
+
+  .admin-table tr.clickable-row {
+    cursor: pointer;
+  }
+
+  .admin-topbar-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script type="module">
+  import {
+    apiFetch,
+    requireAdminAuth,
+    renderSidebar,
+    wireLogout,
+    escapeHtml,
+    formatDate
+  } from '/admin/js/adminShell.js';
+
+  const admin = await requireAdminAuth();
+  if (!admin) {
+    // requireAdminAuth already redirected to the login page.
+    throw new Error('not authenticated');
+  }
+
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="admin-shell">
+      ${renderSidebar('dashboard', admin)}
+      <div class="admin-main">
+        <header class="admin-topbar">
+          <div>
+            <h1>Dashboard</h1>
+            <div class="admin-topbar-sub">Welcome back, ${escapeHtml(admin.name)}</div>
+          </div>
+        </header>
+        <main class="admin-content">
+          <div class="admin-stat-grid" id="admin-stat-grid">
+            ${renderStatTile('—', 'Orders')}
+            ${renderStatTile('—', 'Revenue (last 30d)')}
+            ${renderStatTile('—', 'New Leads (7d)')}
+            ${renderStatTile('—', 'New Messages (7d)')}
+            ${renderStatTile('—', 'Active Products')}
+          </div>
+
+          <div class="admin-dashboard-panels">
+            <section class="admin-panel">
+              <div class="admin-panel-header">
+                <h2>Recent Orders</h2>
+                <a href="/admin/orders.html" class="admin-panel-link">View all</a>
+              </div>
+              <div class="admin-table-wrap">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Order #</th>
+                      <th>Customer</th>
+                      <th>Total</th>
+                      <th>Status</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-recent-orders">
+                    <tr><td colspan="5" class="admin-table-empty">Loading…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="admin-panel">
+              <div class="admin-panel-header">
+                <h2>Recent Messages</h2>
+                <a href="/admin/messages.html" class="admin-panel-link">View all</a>
+              </div>
+              <div class="admin-table-wrap">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Subject</th>
+                      <th>Status</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-recent-messages">
+                    <tr><td colspan="4" class="admin-table-empty">Loading…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </main>
+      </div>
+    </div>
+  `;
+
+  wireLogout();
+
+  function renderStatTile(value, label) {
+    return `
+      <div class="admin-stat-tile">
+        <div class="value">${value}</div>
+        <div class="label">${label}</div>
+      </div>
+    `;
+  }
+
+  function statusBadgeClass(status) {
+    const s = String(status || '').toLowerCase();
+    if (['delivered', 'confirmed', 'replied', 'active'].includes(s)) return 'admin-badge-green';
+    if (['shipped', 'read'].includes(s)) return 'admin-badge-gold';
+    if (['cancelled', 'closed'].includes(s)) return 'admin-badge-red';
+    return 'admin-badge-neutral';
+  }
+
+  // pull a field off a row trying both camelCase and snake_case keys
+  function field(row, camel, snake) {
+    if (row[camel] !== undefined && row[camel] !== null) return row[camel];
+    if (snake && row[snake] !== undefined && row[snake] !== null) return row[snake];
+    return null;
+  }
+
+  async function loadStats() {
+    try {
+      const data = await apiFetch('/api/admin/stats');
+      const grid = document.getElementById('admin-stat-grid');
+      const revenue = Number(data.revenueBdt30d || 0);
+      grid.innerHTML = [
+        renderStatTile(Number(data.ordersCount || 0).toLocaleString(), 'Orders'),
+        renderStatTile('৳' + revenue.toLocaleString(), 'Revenue (last 30d)'),
+        renderStatTile(Number(data.newLeads7d || 0).toLocaleString(), 'New Leads (7d)'),
+        renderStatTile(Number(data.newMessages7d || 0).toLocaleString(), 'New Messages (7d)'),
+        renderStatTile(Number(data.productCount || 0).toLocaleString(), 'Active Products')
+      ].join('');
+    } catch (err) {
+      document.getElementById('admin-stat-grid').innerHTML =
+        `<div class="admin-table-empty">Could not load stats: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  async function loadRecentOrders() {
+    const tbody = document.getElementById('admin-recent-orders');
+    try {
+      const data = await apiFetch('/api/admin/orders');
+      const orders = (data.orders || []).slice(0, 5);
+      if (!orders.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty">No orders yet.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = orders.map(o => `
+        <tr class="clickable-row" onclick="window.location.href='/admin/orders.html'">
+          <td>${escapeHtml(field(o, 'orderNumber', 'order_number'))}</td>
+          <td>${escapeHtml(field(o, 'customerName', 'customer_name'))}</td>
+          <td>৳${Number(field(o, 'totalBdt', 'total_bdt') || 0).toLocaleString()}</td>
+          <td><span class="admin-badge ${statusBadgeClass(o.status)}">${escapeHtml(o.status)}</span></td>
+          <td>${formatDate(field(o, 'createdAt', 'created_at'))}</td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty">Could not load orders: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  async function loadRecentMessages() {
+    const tbody = document.getElementById('admin-recent-messages');
+    try {
+      const data = await apiFetch('/api/admin/messages');
+      const messages = (data.messages || []).slice(0, 5);
+      if (!messages.length) {
+        tbody.innerHTML = `<tr><td colspan="4" class="admin-table-empty">No messages yet.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = messages.map(m => `
+        <tr class="clickable-row" onclick="window.location.href='/admin/messages.html'">
+          <td>${escapeHtml(field(m, 'name'))}</td>
+          <td>${escapeHtml(field(m, 'subject') || '—')}</td>
+          <td><span class="admin-badge ${statusBadgeClass(m.status)}">${escapeHtml(m.status || 'new')}</span></td>
+          <td>${formatDate(field(m, 'createdAt', 'created_at'))}</td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="4" class="admin-table-empty">Could not load messages: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  loadStats();
+  loadRecentOrders();
+  loadRecentMessages();
+</script>
+
+</body>
+</html>

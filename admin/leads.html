@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leads | Marketia China Admin</title>
+  <meta name="robots" content="noindex, nofollow" />
+
+  <!-- Tailwind CSS (locally built, no CDN dependency at runtime) -->
+  <link rel="stylesheet" href="../css/tailwind.build.css" />
+
+  <!-- Marketia China Design System Stylesheets -->
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/glass.css" />
+  <link rel="stylesheet" href="../css/components.css" />
+
+  <!-- Admin control panel layout -->
+  <link rel="stylesheet" href="css/admin.css" />
+</head>
+<body>
+  <div id="admin-root"></div>
+
+  <script type="module">
+    import {
+      apiFetch,
+      requireAdminAuth,
+      renderSidebar,
+      wireLogout,
+      escapeHtml,
+      formatDate
+    } from '/admin/js/adminShell.js';
+
+    const SOURCE_LABELS = {
+      signup: 'Signup',
+      checkout: 'Checkout',
+      sourcing_inquiry: 'Sourcing Inquiry',
+      contact_message: 'Contact Message'
+    };
+
+    let leadsData = [];
+
+    function sourceBadge(source) {
+      const label = SOURCE_LABELS[source] || source || '—';
+      return `<span class="admin-badge admin-badge-neutral">${escapeHtml(label)}</span>`;
+    }
+
+    function csvField(value) {
+      const str = value === null || value === undefined ? '' : String(value);
+      if (/[",\r\n]/.test(str)) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }
+
+    function exportCsv() {
+      const header = ['name', 'email', 'phone', 'source', 'createdAt'];
+      const rows = leadsData.map((l) => [l.name, l.email, l.phone, l.source, l.createdAt]);
+      const csv = [header, ...rows].map((row) => row.map(csvField).join(',')).join('\r\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'marketia-leads.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function renderRows() {
+      const tbody = document.getElementById('leads-tbody');
+      if (!leadsData.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty">No leads yet.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = leadsData
+        .map(
+          (lead) => `
+        <tr>
+          <td>${escapeHtml(lead.name) || '<span style="color:var(--text-muted)">—</span>'}</td>
+          <td>${escapeHtml(lead.email) || '<span style="color:var(--text-muted)">—</span>'}</td>
+          <td>${escapeHtml(lead.phone) || '<span style="color:var(--text-muted)">—</span>'}</td>
+          <td>${sourceBadge(lead.source)}</td>
+          <td>${formatDate(lead.createdAt)}</td>
+        </tr>
+      `
+        )
+        .join('');
+    }
+
+    async function loadLeads() {
+      const tbody = document.getElementById('leads-tbody');
+      try {
+        const data = await apiFetch('/api/admin/leads');
+        leadsData = data.leads || [];
+        renderRows();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty">Failed to load leads: ${escapeHtml(
+          err.message
+        )}</td></tr>`;
+      }
+    }
+
+    async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+
+      document.getElementById('admin-root').innerHTML = `
+        <div class="admin-shell">
+          ${renderSidebar('leads', admin)}
+          <div class="admin-main">
+            <div class="admin-topbar">
+              <h1>Leads</h1>
+            </div>
+            <div class="admin-content">
+              <div class="admin-panel">
+                <div class="admin-panel-header">
+                  <h2>All Leads</h2>
+                  <button id="export-csv-btn" class="btn-secondary text-xs">Export CSV</button>
+                </div>
+                <div class="admin-table-wrap">
+                  <table class="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Source</th>
+                        <th>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody id="leads-tbody">
+                      <tr><td colspan="5" class="admin-table-empty">Loading…</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      wireLogout();
+      document.getElementById('export-csv-btn').addEventListener('click', exportCsv);
+
+      await loadLeads();
+    }
+
+    init();
+  </script>
+</body>
+</html>

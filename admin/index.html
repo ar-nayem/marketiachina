@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin Login | Marketia China Control Panel</title>
+<meta name="robots" content="noindex, nofollow" />
+
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="stylesheet" href="/css/components.css" />
+<link rel="stylesheet" href="/admin/css/admin.css" />
+
+<style>
+  .admin-auth-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .admin-auth-brand .mark {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--mc-china-red);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .admin-auth-brand .title {
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--text-primary);
+  }
+
+  .admin-auth-brand .title span {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+  }
+
+  .admin-auth-field {
+    margin-bottom: 18px;
+  }
+
+  .admin-auth-error {
+    color: var(--mc-china-red);
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-top: 14px;
+    min-height: 18px;
+  }
+
+  .admin-auth-submit {
+    width: 100%;
+    margin-top: 6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="admin-auth-screen">
+  <div class="admin-auth-card">
+    <div class="admin-auth-brand">
+      <div class="mark">MC</div>
+      <div class="title">Marketia China<span>Control Panel</span></div>
+    </div>
+
+    <form id="admin-login-form" novalidate>
+      <div class="admin-auth-field">
+        <label class="form-label" for="admin-email">Email</label>
+        <input class="form-input" type="email" id="admin-email" name="email" autocomplete="username" required />
+      </div>
+      <div class="admin-auth-field">
+        <label class="form-label" for="admin-password">Password</label>
+        <input class="form-input" type="password" id="admin-password" name="password" autocomplete="current-password" required />
+      </div>
+
+      <button type="submit" class="btn-primary admin-auth-submit" id="admin-login-submit">Log In</button>
+
+      <div class="admin-auth-error" id="admin-login-error"></div>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+  import { apiFetch } from '/admin/js/adminShell.js';
+
+  // If already logged in, skip straight to the dashboard.
+  (async () => {
+    try {
+      await apiFetch('/api/admin/auth/me');
+      window.location.href = '/admin/dashboard.html';
+    } catch (_) {
+      // not logged in — stay on the login form
+    }
+  })();
+
+  const form = document.getElementById('admin-login-form');
+  const errorEl = document.getElementById('admin-login-error');
+  const submitBtn = document.getElementById('admin-login-submit');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorEl.textContent = '';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Logging in…';
+
+    const email = document.getElementById('admin-email').value.trim();
+    const password = document.getElementById('admin-password').value;
+
+    try {
+      await apiFetch('/api/admin/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
+      });
+      window.location.href = '/admin/dashboard.html';
+    } catch (err) {
+      errorEl.textContent = err.message || 'Login failed. Please try again.';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Log In';
+    }
+  });
+</script>
+
+</body>
+</html>

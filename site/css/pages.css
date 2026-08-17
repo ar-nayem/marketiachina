@@ -1,0 +1,564 @@
+/* Marketia China - Hand-authored CSS for new standalone pages (account/auth flows)
+   NOTE: Deliberately hand-authored, NOT Tailwind utility classes.
+   css/tailwind.build.css is a purge-built file that only contains utility
+   classes already referenced somewhere in the existing HTML/JS - any brand
+   new utility combo here would render unstyled. Everything below is plain
+   CSS using the shared design tokens from css/style.css. */
+
+/* ---------- Shared auth shell (login / signup / forgot / reset) ---------- */
+
+.auth-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 50% -10%, var(--mc-china-red-light) 0%, transparent 55%),
+    var(--bg-primary);
+  padding: 48px 20px;
+}
+
+.auth-shell {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+.auth-logo-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-logo-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--mc-china-red) 0%, #A01602 100%);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(222, 41, 16, 0.28);
+  flex-shrink: 0;
+}
+
+.auth-logo-mark svg {
+  width: 24px;
+  height: 24px;
+}
+
+.auth-logo-text-wrap {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.auth-logo-text {
+  font-weight: 800;
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.auth-logo-text em {
+  font-style: normal;
+  color: var(--mc-china-red);
+}
+
+.auth-logo-sub {
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+.auth-card {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 36px 32px;
+}
+
+.auth-card-header {
+  margin-bottom: 22px;
+  text-align: center;
+}
+
+.auth-card-header h1 {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.auth-card-header p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-field-row {
+  display: flex;
+  gap: 12px;
+}
+
+.auth-field-row .auth-field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.auth-submit-btn {
+  width: 100%;
+  margin-top: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.auth-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.auth-alert {
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+
+.auth-alert-error {
+  background: var(--mc-china-red-light);
+  color: var(--mc-china-red);
+  border: 1px solid rgba(222, 41, 16, 0.25);
+}
+
+.auth-alert-success {
+  background: rgba(34, 175, 94, 0.1);
+  color: #1E9E52;
+  border: 1px solid rgba(34, 175, 94, 0.25);
+}
+
+[data-theme="dark"] .auth-alert-success {
+  color: #3FD277;
+  background: rgba(63, 210, 119, 0.12);
+  border-color: rgba(63, 210, 119, 0.28);
+}
+
+.auth-footer-links {
+  margin-top: 22px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-footer-links p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.auth-footer-links a {
+  color: var(--mc-china-red);
+  font-weight: 700;
+}
+
+.auth-footer-links a:hover {
+  text-decoration: underline;
+}
+
+.auth-back-link {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--mc-china-red);
+}
+
+.auth-back-link:hover {
+  text-decoration: underline;
+}
+
+.auth-loading {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+}
+
+.auth-spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--mc-china-red);
+  animation: auth-spin 0.8s linear infinite;
+}
+
+@keyframes auth-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- Account page ---------- */
+
+.account-page {
+  min-height: 100vh;
+  width: 100%;
+  background: var(--bg-primary);
+  padding: 56px 20px 60px;
+  display: flex;
+  justify-content: center;
+}
+
+.account-shell {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.account-header-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 28px 30px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.account-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1 1 220px;
+  min-width: 220px;
+}
+
+.account-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--mc-china-red) 0%, #A01602 100%);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.account-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.account-meta {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.account-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 26px 30px;
+}
+
+.account-section h2 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+}
+
+.account-empty-state {
+  border: 1.5px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* ---------- Responsive tweaks ---------- */
+
+@media (max-width: 560px) {
+  .auth-card {
+    padding: 28px 22px;
+  }
+
+  .auth-field-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .account-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ---------- Service detail page (/services/:slug) ---------- */
+
+.service-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+}
+
+.service-topbar {
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  padding: 16px 20px;
+}
+
+.service-topbar-inner {
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.service-main {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 48px 20px 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+/* Loading state */
+
+.service-loading {
+  min-height: 60vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Not-found / error state */
+
+.service-not-found {
+  min-height: 50vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 14px;
+  padding: 40px 20px;
+}
+
+.service-not-found-icon {
+  font-size: 3rem;
+  line-height: 1;
+  margin-bottom: 6px;
+  opacity: 0.85;
+}
+
+.service-not-found h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.service-not-found p {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  max-width: 380px;
+  line-height: 1.6;
+}
+
+.service-not-found .btn-primary {
+  margin-top: 10px;
+  text-decoration: none;
+}
+
+/* Hero */
+
+.service-hero {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-md);
+  padding: 44px 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.service-hero-icon {
+  width: 76px;
+  height: 76px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.service-hero-title {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.25;
+  max-width: 620px;
+}
+
+.service-hero-tagline {
+  font-size: 1rem;
+  font-weight: 700;
+  max-width: 560px;
+}
+
+/* Body copy */
+
+.service-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.service-body p {
+  font-size: 0.98rem;
+  line-height: 1.75;
+  color: var(--text-secondary);
+}
+
+/* Highlights list (mirrors ShippingComparison.js checkmark pattern) */
+
+.service-section-heading {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.service-highlights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+}
+
+.service-highlight-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+}
+
+.service-highlight-check {
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Bottom CTA panel */
+
+.service-cta-panel {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  padding: 32px;
+  text-align: center;
+}
+
+.service-cta-desc {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  max-width: 480px;
+  margin: 0 auto 22px;
+  line-height: 1.6;
+}
+
+.service-cta-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.service-cta-actions .btn-primary,
+.service-cta-actions .service-whatsapp-btn {
+  text-decoration: none;
+}
+
+.service-whatsapp-btn {
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  color: #0E9F6E;
+}
+
+[data-theme="dark"] .service-whatsapp-btn {
+  color: #34D399;
+}
+
+@media (max-width: 560px) {
+  .service-hero {
+    padding: 34px 22px;
+  }
+
+  .service-hero-title {
+    font-size: 1.5rem;
+  }
+
+  .service-cta-panel {
+    padding: 26px 20px;
+  }
+
+  .service-cta-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .service-cta-actions .btn-primary,
+  .service-cta-actions .service-whatsapp-btn {
+    width: 100%;
+  }
+}
