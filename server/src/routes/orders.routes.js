@@ -5,6 +5,7 @@ const { resolveSession } = require('../lib/session');
 const { requireAuth, attachCustomerIfPresent } = require('../middleware/requireAuth');
 const { sendMail } = require('../lib/mailer');
 const { renderInvoiceHtml } = require('../lib/invoice');
+const { notifyTelegram } = require('../lib/telegram');
 
 const router = express.Router();
 
@@ -186,6 +187,16 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
     kind: 'invoice',
     relatedOrderId: order.id,
   });
+
+  const itemsSummary = savedItems.map((li) => `• ${li.product_name_snapshot} × ${li.quantity}`).join('\n');
+  notifyTelegram(
+    `🛒 <b>New Order ${order.order_number}</b>\n` +
+      `${name} — ${phone}\n` +
+      `${email}\n\n` +
+      `${itemsSummary}\n\n` +
+      `Total: ৳${totalBDT.toLocaleString()} (${paymentMethod.toUpperCase()}, ${shippingMethod} freight)\n` +
+      `Address: ${address}`
+  );
 
   const whatsappNumberRaw = getSettingValue('whatsapp_number', '');
   const whatsappNumber = String(whatsappNumberRaw || '').replace(/[^\d]/g, '');

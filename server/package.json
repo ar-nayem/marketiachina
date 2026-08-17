@@ -9,6 +9,8 @@
     "seed": "node src/seed.js"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2",
+    "nodemailer": "^9.0.5"
   }
 }

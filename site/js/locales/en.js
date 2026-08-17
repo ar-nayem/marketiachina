@@ -228,7 +228,13 @@ export const en = {
     successTitle: "🎉 Order Successfully Placed!",
     successDesc: "Our China logistics coordinator will contact you via WhatsApp with the tracking docket and commercial invoice.",
     trackingNo: "Tracking ID:",
-    close: "Close"
+    close: "Close",
+    gateTitle: "How would you like to check out?",
+    gateSubtitle: "Log in to track this order in “My Account”, or continue as a guest with just your email and phone.",
+    gateLoginBtn: "Log In / Sign Up",
+    gateGuestBtn: "Continue as Guest",
+    gateGuestNote: "We'll only need your email and phone number.",
+    gateBack: "Back"
   },
 
   sourcingModal: {

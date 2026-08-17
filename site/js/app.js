@@ -103,9 +103,23 @@ async function initMarketiaApp() {
   try {
     await Promise.all([loadProducts(), settingsState.ready]);
     window.marketiaApp = new App();
+    reopenCheckoutIfRequested();
   } catch (err) {
     console.error('Error initializing Marketia App:', err);
   }
+}
+
+// After a checkout-gated login redirect (see CheckoutModal.js), the login
+// page sends the user back to /?checkout=1 so the cart's checkout modal
+// reopens automatically instead of losing their place.
+function reopenCheckoutIfRequested() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('checkout') !== '1') return;
+  document.dispatchEvent(new CustomEvent('open-checkout-modal'));
+  params.delete('checkout');
+  const newSearch = params.toString();
+  const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash;
+  window.history.replaceState(null, '', newUrl);
 }
 
 if (document.readyState === 'loading') {

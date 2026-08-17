@@ -228,7 +228,13 @@ export const zh = {
     successTitle: "🎉 订单已成功提交！",
     successDesc: "我们的中国物流专员将通过 WhatsApp / WeChat 与您对接运单号及形式发票 (PI)。",
     trackingNo: "国际运单编号:",
-    close: "完成"
+    close: "完成",
+    gateTitle: "您希望如何结算？",
+    gateSubtitle: "登录后可在“我的账户”中追踪此订单；或仅凭邮箱和电话以访客身份继续。",
+    gateLoginBtn: "登录 / 注册",
+    gateGuestBtn: "以访客身份继续",
+    gateGuestNote: "仅需提供您的邮箱和电话号码。",
+    gateBack: "返回"
   },
 
   sourcingModal: {

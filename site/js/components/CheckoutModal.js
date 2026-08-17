@@ -1,13 +1,14 @@
 // Marketia China - Checkout Modal & Order Processing Component
 import { langState } from '../state/langState.js';
 import { cartState } from '../state/cartState.js';
+import { authState } from '../state/authState.js';
 import confetti from '../vendor/confetti/confetti.module.mjs';
 
 export class CheckoutModal {
   constructor(modalElement) {
     this.modalElement = modalElement;
     this.isOpen = false;
-    this.isSuccess = false;
+    this.step = 'gate'; // 'gate' | 'form' | 'success'
     this.isSubmitting = false;
     this.selectedPayment = 'bkash';
     this.orderNumber = '';
@@ -31,7 +32,22 @@ export class CheckoutModal {
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
 
-        ${this.isSuccess ? `
+        ${this.step === 'gate' ? `
+          <!-- Login-or-Guest Gate -->
+          <div class="py-8 text-center space-y-5">
+            <h3 class="text-xl font-black text-[var(--text-primary)]">${t.checkout.gateTitle}</h3>
+            <p class="text-sm text-[var(--text-secondary)] leading-relaxed max-w-md mx-auto">${t.checkout.gateSubtitle}</p>
+            <div class="pt-2 flex flex-col items-center gap-3 max-w-xs mx-auto">
+              <button id="checkout-gate-login" class="w-full btn-primary py-3 text-sm rounded-xl font-bold">
+                ${t.checkout.gateLoginBtn}
+              </button>
+              <button id="checkout-gate-guest" class="w-full btn-secondary py-3 text-sm rounded-xl font-bold">
+                ${t.checkout.gateGuestBtn}
+              </button>
+              <p class="text-xs text-[var(--text-muted)]">${t.checkout.gateGuestNote}</p>
+            </div>
+          </div>
+        ` : this.step === 'success' ? `
           <!-- Order Confirmation Screen -->
           <div class="py-8 text-center space-y-5">
             <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center text-3xl font-black">
@@ -75,17 +91,17 @@ export class CheckoutModal {
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label class="form-label">${t.checkout.name} *</label>
-                  <input type="text" name="customerName" required class="form-input" placeholder="e.g. Tanvir Ahmed" />
+                  <input type="text" name="customerName" required class="form-input" placeholder="e.g. Tanvir Ahmed" value="${authState.user?.name || ''}" />
                 </div>
                 <div>
                   <label class="form-label">${t.checkout.phone} *</label>
-                  <input type="tel" name="customerPhone" required class="form-input" placeholder="e.g. 017XXXXXXXX" />
+                  <input type="tel" name="customerPhone" required class="form-input" placeholder="e.g. 017XXXXXXXX" value="${authState.user?.phone || ''}" />
                 </div>
               </div>
 
               <div>
                 <label class="form-label">${t.checkout.email} *</label>
-                <input type="email" name="customerEmail" required class="form-input" placeholder="e.g. name@example.com" />
+                <input type="email" name="customerEmail" required class="form-input" placeholder="e.g. name@example.com" value="${authState.user?.email || ''}" />
               </div>
 
               <div>
@@ -145,7 +161,7 @@ export class CheckoutModal {
 
   open() {
     this.isOpen = true;
-    this.isSuccess = false;
+    this.step = authState.user ? 'form' : 'gate';
     this.render();
   }
 
@@ -158,9 +174,27 @@ export class CheckoutModal {
     langState.subscribe(() => this.render());
     document.addEventListener('open-checkout-modal', () => this.open());
 
+    authState.subscribe(() => {
+      if (this.isOpen && this.step === 'gate' && authState.user) {
+        this.step = 'form';
+        this.render();
+      }
+    });
+
     this.modalElement.addEventListener('click', (e) => {
       if (e.target.closest('#close-checkout-modal') || e.target.closest('#finish-order-btn')) {
         this.close();
+        return;
+      }
+
+      if (e.target.closest('#checkout-gate-login')) {
+        window.location.href = `/login?redirect=${encodeURIComponent('/?checkout=1')}`;
+        return;
+      }
+
+      if (e.target.closest('#checkout-gate-guest')) {
+        this.step = 'form';
+        this.render();
         return;
       }
 
@@ -225,7 +259,7 @@ export class CheckoutModal {
       this.orderNumber = data.orderNumber || '';
       this.invoiceUrl = data.invoiceUrl || '';
       this.whatsappUrl = data.whatsappUrl || '';
-      this.isSuccess = true;
+      this.step = 'success';
       this.isSubmitting = false;
       this.render();
       cartState.clearCart();

@@ -1,3 +1,4 @@
+require('dotenv').config({ quiet: true });
 const path = require('node:path');
 const express = require('express');
 
