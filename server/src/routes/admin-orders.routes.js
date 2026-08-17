@@ -1,6 +1,7 @@
 const express = require('express');
 const { db } = require('../db');
-const { requireAdmin } = require('../middleware/requireAdmin');
+const { requirePermission } = require('../middleware/requirePermission');
+const { logActivity } = require('../lib/activityLog');
 
 const router = express.Router();
 
@@ -39,7 +40,7 @@ function toCamelItem(i) {
   };
 }
 
-router.get('/', requireAdmin, (req, res) => {
+router.get('/', requirePermission('orders.view'), (req, res) => {
   const rows = db
     .prepare(
       `SELECT o.*, COUNT(oi.id) AS item_count
@@ -64,7 +65,7 @@ router.get('/', requireAdmin, (req, res) => {
   });
 });
 
-router.get('/:id', requireAdmin, (req, res) => {
+router.get('/:id', requirePermission('orders.view'), (req, res) => {
   const order = db.prepare(`SELECT * FROM orders WHERE id = ?`).get(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found.' });
 
@@ -72,16 +73,28 @@ router.get('/:id', requireAdmin, (req, res) => {
   res.json({ order: { ...toCamelOrder(order), items: items.map(toCamelItem) } });
 });
 
-router.patch('/:id', requireAdmin, (req, res) => {
+router.patch('/:id', requirePermission('orders.update_status'), (req, res) => {
   const { status } = req.body || {};
   if (!VALID_STATUSES.includes(status)) {
     return res.status(400).json({ error: `Status must be one of: ${VALID_STATUSES.join(', ')}.` });
   }
 
-  const order = db.prepare(`SELECT id FROM orders WHERE id = ?`).get(req.params.id);
+  const order = db.prepare(`SELECT id, status FROM orders WHERE id = ?`).get(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found.' });
 
   db.prepare(`UPDATE orders SET status = ? WHERE id = ?`).run(status, req.params.id);
+
+  logActivity({
+    adminId: req.admin.id,
+    adminName: req.admin.name,
+    action: 'order.status_changed',
+    targetType: 'order',
+    targetId: req.params.id,
+    before: { status: order.status },
+    after: { status },
+    ip: req.ip
+  });
+
   res.json({ ok: true });
 });
 

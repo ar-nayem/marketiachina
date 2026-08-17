@@ -1,7 +1,8 @@
 const express = require('express');
 const crypto = require('node:crypto');
 const { db } = require('../db');
-const { requireAdmin } = require('../middleware/requireAdmin');
+const { requirePermission } = require('../middleware/requirePermission');
+const { logActivity } = require('../lib/activityLog');
 
 const router = express.Router();
 
@@ -99,12 +100,12 @@ function replaceTiers(productId, tiers) {
   });
 }
 
-router.get('/', requireAdmin, (req, res) => {
+router.get('/', requirePermission('products.view'), (req, res) => {
   const rows = db.prepare(`SELECT * FROM products ORDER BY rowid ASC`).all();
   res.json({ products: rows.map(loadFullProduct) });
 });
 
-router.post('/', requireAdmin, (req, res) => {
+router.post('/', requirePermission('products.create'), (req, res) => {
   const body = req.body || {};
   const name = body.name || {};
 
@@ -156,10 +157,21 @@ router.post('/', requireAdmin, (req, res) => {
   replaceTiers(id, body.wholesaleTiers || []);
 
   const row = db.prepare(`SELECT * FROM products WHERE id = ?`).get(id);
+
+  logActivity({
+    adminId: req.admin.id,
+    adminName: req.admin.name,
+    action: 'product.created',
+    targetType: 'product',
+    targetId: id,
+    after: { category: body.category, priceBDT: body.priceBDT, name: { en: name.en } },
+    ip: req.ip
+  });
+
   res.status(201).json({ product: loadFullProduct(row) });
 });
 
-router.put('/:id', requireAdmin, (req, res) => {
+router.put('/:id', requirePermission('products.edit'), (req, res) => {
   const existing = db.prepare(`SELECT id FROM products WHERE id = ?`).get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Product not found.' });
 
@@ -212,22 +224,53 @@ router.put('/:id', requireAdmin, (req, res) => {
   if (body.wholesaleTiers !== undefined) replaceTiers(req.params.id, body.wholesaleTiers || []);
 
   const row = db.prepare(`SELECT * FROM products WHERE id = ?`).get(req.params.id);
+
+  logActivity({
+    adminId: req.admin.id,
+    adminName: req.admin.name,
+    action: 'product.updated',
+    targetType: 'product',
+    targetId: req.params.id,
+    after: req.body,
+    ip: req.ip
+  });
+
   res.json({ product: loadFullProduct(row) });
 });
 
-router.delete('/:id', requireAdmin, (req, res) => {
+router.delete('/:id', requirePermission('products.delete'), (req, res) => {
   const existing = db.prepare(`SELECT id FROM products WHERE id = ?`).get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Product not found.' });
 
   db.prepare(`UPDATE products SET is_active = 0, updated_at = datetime('now') WHERE id = ?`).run(req.params.id);
+
+  logActivity({
+    adminId: req.admin.id,
+    adminName: req.admin.name,
+    action: 'product.archived',
+    targetType: 'product',
+    targetId: req.params.id,
+    ip: req.ip
+  });
+
   res.json({ ok: true });
 });
 
-router.post('/:id/restore', requireAdmin, (req, res) => {
+router.post('/:id/restore', requirePermission('products.edit'), (req, res) => {
   const existing = db.prepare(`SELECT id FROM products WHERE id = ?`).get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Product not found.' });
 
   db.prepare(`UPDATE products SET is_active = 1, updated_at = datetime('now') WHERE id = ?`).run(req.params.id);
+
+  logActivity({
+    adminId: req.admin.id,
+    adminName: req.admin.name,
+    action: 'product.restored',
+    targetType: 'product',
+    targetId: req.params.id,
+    ip: req.ip
+  });
+
   res.json({ ok: true });
 });
 

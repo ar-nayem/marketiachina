@@ -1,6 +1,7 @@
 const express = require('express');
 const { db } = require('../db');
-const { requireAdmin } = require('../middleware/requireAdmin');
+const { requirePermission } = require('../middleware/requirePermission');
+const { logActivity } = require('../lib/activityLog');
 
 const router = express.Router();
 
@@ -31,12 +32,12 @@ function toCamelMessage(row) {
   };
 }
 
-router.get('/', requireAdmin, (req, res) => {
+router.get('/', requirePermission('messages.view'), (req, res) => {
   const rows = db.prepare(`SELECT * FROM messages ORDER BY created_at DESC, id DESC`).all();
   res.json({ messages: rows.map(toCamelMessage) });
 });
 
-router.patch('/:id/reply', requireAdmin, (req, res) => {
+router.patch('/:id/reply', requirePermission('messages.reply'), (req, res) => {
   const { id } = req.params;
   const { reply } = req.body || {};
 
@@ -50,6 +51,15 @@ router.patch('/:id/reply', requireAdmin, (req, res) => {
   db.prepare(
     `UPDATE messages SET admin_reply = ?, replied_at = datetime('now'), status = 'replied' WHERE id = ?`
   ).run(reply, id);
+
+  logActivity({
+    adminId: req.admin.id,
+    adminName: req.admin.name,
+    action: 'message.replied',
+    targetType: 'message',
+    targetId: id,
+    ip: req.ip
+  });
 
   res.json({ ok: true });
 });

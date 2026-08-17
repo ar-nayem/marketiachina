@@ -98,8 +98,9 @@ function seedAdmin() {
 
   const password = process.env.SEED_ADMIN_PASSWORD || 'MarketiaAdmin123!';
   const passwordHash = hashPassword(password);
-  db.prepare(`INSERT INTO admin_users (name, email, password_hash, role) VALUES (?, ?, ?, 'owner')`).run(
-    'Marketia Owner', email, passwordHash
+  const adminRole = db.prepare(`SELECT id FROM roles WHERE key = 'admin'`).get();
+  db.prepare(`INSERT INTO admin_users (name, email, password_hash, role, role_id) VALUES (?, ?, ?, 'owner', ?)`).run(
+    'Marketia Owner', email, passwordHash, adminRole ? adminRole.id : null
   );
   return { email, password, created: true };
 }

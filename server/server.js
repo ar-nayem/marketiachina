@@ -28,6 +28,9 @@ app.use('/api/orders', require('./src/routes/orders.routes'));
 app.use('/api/admin/orders', require('./src/routes/admin-orders.routes'));
 app.use('/api/messages', require('./src/routes/messages.routes'));
 app.use('/api/admin/messages', require('./src/routes/admin-messages.routes'));
+app.use('/api/admin/users', require('./src/routes/admin-users.routes'));
+app.use('/api/admin/roles', require('./src/routes/admin-roles.routes'));
+app.use('/api/admin/activity-logs', require('./src/routes/admin-activity.routes'));
 app.use('/api/admin', require('./src/routes/admin-misc.routes'));
 
 // --- Pretty routes for the account & service pages ---

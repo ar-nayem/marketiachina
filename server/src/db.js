@@ -13,5 +13,6 @@ db.exec('PRAGMA journal_mode = WAL');
 
 const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
 db.exec(schema);
+require('./lib/migrations').runMigrations(db);
 
 module.exports = { db, DB_PATH };

@@ -9,6 +9,8 @@ const NAV_ITEMS = [
   { href: '/admin/messages.html', icon: '💬', label: 'Messages', key: 'messages' },
   { href: '/admin/leads.html', icon: '🎯', label: 'Leads', key: 'leads' },
   { href: '/admin/customers.html', icon: '👤', label: 'Customers', key: 'customers' },
+  { href: '/admin/users.html', icon: '👥', label: 'Users & Roles', key: 'users' },
+  { href: '/admin/activity-logs.html', icon: '📜', label: 'Activity Logs', key: 'activity-logs' },
   { href: '/admin/settings.html', icon: '⚙️', label: 'Settings', key: 'settings' },
   { href: '/admin/outbox.html', icon: '✉️', label: 'Mail Outbox', key: 'outbox' }
 ];

@@ -1,10 +1,11 @@
 const express = require('express');
 const { db } = require('../db');
-const { requireAdmin } = require('../middleware/requireAdmin');
+const { requirePermission } = require('../middleware/requirePermission');
+const { logActivity } = require('../lib/activityLog');
 
 const router = express.Router();
 
-router.use(requireAdmin);
+router.use(requirePermission('settings.manage'));
 
 function parseHighlights(value) {
   if (!value) return [];
@@ -91,6 +92,16 @@ router.post('/', (req, res) => {
     );
 
   const row = getServiceRow(result.lastInsertRowid);
+
+  logActivity({
+    adminId: req.admin.id,
+    adminName: req.admin.name,
+    action: 'service.created',
+    targetType: 'service',
+    targetId: result.lastInsertRowid,
+    ip: req.ip
+  });
+
   res.status(201).json({ service: toAdminService(row) });
 });
 
@@ -151,6 +162,16 @@ router.put('/:id', (req, res) => {
   );
 
   const updated = getServiceRow(row.id);
+
+  logActivity({
+    adminId: req.admin.id,
+    adminName: req.admin.name,
+    action: 'service.updated',
+    targetType: 'service',
+    targetId: req.params.id,
+    ip: req.ip
+  });
+
   res.json({ service: toAdminService(updated) });
 });
 
@@ -159,6 +180,16 @@ router.delete('/:id', (req, res) => {
   if (!row) return res.status(404).json({ error: 'Service not found.' });
 
   db.prepare(`UPDATE services SET is_active = 0, updated_at = datetime('now') WHERE id = ?`).run(row.id);
+
+  logActivity({
+    adminId: req.admin.id,
+    adminName: req.admin.name,
+    action: 'service.archived',
+    targetType: 'service',
+    targetId: req.params.id,
+    ip: req.ip
+  });
+
   res.json({ ok: true });
 });
 

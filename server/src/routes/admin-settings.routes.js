@@ -1,6 +1,7 @@
 const express = require('express');
 const { db } = require('../db');
-const { requireAdmin } = require('../middleware/requireAdmin');
+const { requirePermission } = require('../middleware/requirePermission');
+const { logActivity } = require('../lib/activityLog');
 
 const router = express.Router();
 
@@ -22,7 +23,7 @@ const upsertSetting = db.prepare(
    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`
 );
 
-router.use(requireAdmin);
+router.use(requirePermission('settings.manage'));
 
 router.get('/', (req, res) => {
   res.json({
@@ -42,6 +43,15 @@ router.put('/', (req, res) => {
       upsertSetting.run(dbKey, JSON.stringify(body[bodyKey]));
     }
   }
+
+  logActivity({
+    adminId: req.admin.id,
+    adminName: req.admin.name,
+    action: 'settings.updated',
+    targetType: 'settings',
+    after: req.body,
+    ip: req.ip
+  });
 
   res.json({ ok: true });
 });

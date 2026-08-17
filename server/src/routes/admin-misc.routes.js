@@ -1,10 +1,10 @@
 const express = require('express');
 const { db } = require('../db');
-const { requireAdmin } = require('../middleware/requireAdmin');
+const { requirePermission } = require('../middleware/requirePermission');
 
 const router = express.Router();
 
-router.get('/leads', requireAdmin, (req, res) => {
+router.get('/leads', requirePermission('customers.view'), (req, res) => {
   const rows = db.prepare(`SELECT * FROM leads ORDER BY created_at DESC, id DESC`).all();
   const leads = rows.map((row) => ({
     id: row.id,
@@ -17,7 +17,7 @@ router.get('/leads', requireAdmin, (req, res) => {
   res.json({ leads });
 });
 
-router.get('/customers', requireAdmin, (req, res) => {
+router.get('/customers', requirePermission('customers.view'), (req, res) => {
   const rows = db
     .prepare(
       `SELECT c.id, c.name, c.email, c.phone, c.created_at,
@@ -37,7 +37,7 @@ router.get('/customers', requireAdmin, (req, res) => {
   res.json({ customers });
 });
 
-router.get('/outbox', requireAdmin, (req, res) => {
+router.get('/outbox', requirePermission('settings.manage'), (req, res) => {
   const rows = db
     .prepare(`SELECT * FROM mail_outbox ORDER BY created_at DESC, id DESC LIMIT 200`)
     .all();
@@ -52,7 +52,7 @@ router.get('/outbox', requireAdmin, (req, res) => {
   res.json({ emails });
 });
 
-router.get('/stats', requireAdmin, (req, res) => {
+router.get('/stats', requirePermission('orders.view'), (req, res) => {
   const ordersCount = db.prepare(`SELECT COUNT(*) AS n FROM orders`).get().n;
 
   const revenueBdt30d =

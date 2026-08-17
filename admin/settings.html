@@ -26,7 +26,8 @@
       requireAdminAuth,
       renderSidebar,
       wireLogout,
-      escapeHtml
+      escapeHtml,
+      formatDate
     } from '/admin/js/adminShell.js';
 
     const RATE_FIELDS = [
@@ -152,6 +153,110 @@
       el.style.color = isError ? 'var(--mc-china-red)' : 'var(--text-muted)';
     }
 
+    function setSecurityStatus(elId, message, isError) {
+      const el = document.getElementById(elId);
+      if (!el) return;
+      el.textContent = message;
+      el.style.color = isError ? 'var(--mc-china-red)' : 'var(--text-muted)';
+    }
+
+    async function handleChangePassword(evt) {
+      evt.preventDefault();
+      const btn = document.getElementById('change-password-btn');
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (newPassword.length < 8) {
+        setSecurityStatus('change-password-status', 'New password must be at least 8 characters.', true);
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setSecurityStatus('change-password-status', 'New passwords do not match.', true);
+        return;
+      }
+
+      btn.disabled = true;
+      setSecurityStatus('change-password-status', 'Saving…', false);
+      try {
+        await apiFetch('/api/admin/auth/change-password', {
+          method: 'POST',
+          body: JSON.stringify({ currentPassword, newPassword })
+        });
+        setSecurityStatus('change-password-status', 'Password changed.', false);
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+      } catch (err) {
+        setSecurityStatus('change-password-status', `Failed to change password: ${err.message}`, true);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function sessionRowHtml(s) {
+      const device = s.userAgent || 'Unknown device';
+      const badgeOrBtn = s.isCurrent
+        ? `<span class="admin-badge admin-badge-green">This device</span>`
+        : `<button type="button" class="btn-secondary revoke-session-btn" data-id="${s.id}" style="padding:6px 12px;font-size:12px;">Revoke</button>`;
+
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--border-color);">
+          <div>
+            <div style="font-size:13px;font-weight:600;">${escapeHtml(device)}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Signed in ${escapeHtml(formatDate(s.createdAt))}</div>
+          </div>
+          <div>${badgeOrBtn}</div>
+        </div>
+      `;
+    }
+
+    async function loadSessions() {
+      const wrap = document.getElementById('sessions-list');
+      try {
+        const data = await apiFetch('/api/admin/auth/sessions');
+        const sessions = data.sessions || [];
+        wrap.innerHTML = sessions.length
+          ? sessions.map(sessionRowHtml).join('')
+          : `<div class="admin-table-empty">No active sessions.</div>`;
+
+        wrap.querySelectorAll('.revoke-session-btn').forEach((btn) => {
+          btn.addEventListener('click', () => handleRevokeSession(btn));
+        });
+      } catch (err) {
+        wrap.innerHTML = `<div class="admin-table-empty">Failed to load sessions.</div>`;
+      }
+    }
+
+    async function handleRevokeSession(btn) {
+      const id = btn.getAttribute('data-id');
+      btn.disabled = true;
+      btn.textContent = 'Revoking…';
+      try {
+        await apiFetch(`/api/admin/auth/sessions/${id}`, { method: 'DELETE' });
+        await loadSessions();
+      } catch (err) {
+        setSecurityStatus('sessions-status', `Failed to revoke session: ${err.message}`, true);
+        btn.disabled = false;
+        btn.textContent = 'Revoke';
+      }
+    }
+
+    async function handleLogoutOtherDevices() {
+      const btn = document.getElementById('logout-other-devices-btn');
+      btn.disabled = true;
+      setSecurityStatus('sessions-status', 'Logging out other devices…', false);
+      try {
+        await apiFetch('/api/admin/auth/sessions/logout-all', { method: 'POST' });
+        setSecurityStatus('sessions-status', 'Other devices logged out.', false);
+        await loadSessions();
+      } catch (err) {
+        setSecurityStatus('sessions-status', `Failed: ${err.message}`, true);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
     async function loadSettings() {
       try {
         const data = await apiFetch('/api/admin/settings');
@@ -239,6 +344,45 @@
                   <div class="admin-table-empty">Loading…</div>
                 </div>
               </div>
+
+              <div class="admin-panel" style="max-width:640px;margin-top:24px;">
+                <div class="admin-panel-header">
+                  <h2>Security</h2>
+                </div>
+
+                <form id="change-password-form" style="padding:20px;display:flex;flex-direction:column;gap:18px;border-bottom:1px solid var(--border-color);">
+                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);">Change Password</div>
+                  <div>
+                    <label class="form-label" for="currentPassword">Current Password</label>
+                    <input class="form-input" type="password" id="currentPassword" autocomplete="current-password" required />
+                  </div>
+                  <div>
+                    <label class="form-label" for="newPassword">New Password</label>
+                    <input class="form-input" type="password" id="newPassword" autocomplete="new-password" required />
+                  </div>
+                  <div>
+                    <label class="form-label" for="confirmPassword">Confirm New Password</label>
+                    <input class="form-input" type="password" id="confirmPassword" autocomplete="new-password" required />
+                  </div>
+                  <div style="display:flex;align-items:center;gap:14px;">
+                    <button type="submit" class="btn-primary" id="change-password-btn">Save Password</button>
+                    <span id="change-password-status" style="font-size:13px;color:var(--text-muted);"></span>
+                  </div>
+                </form>
+
+                <div style="padding:20px;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);">Active Sessions</div>
+                    <button type="button" class="btn-secondary" id="logout-other-devices-btn" style="padding:6px 12px;font-size:12px;">Log Out Other Devices</button>
+                  </div>
+                  <div id="sessions-list" style="border:1px solid var(--border-color);border-radius:var(--radius-sm);margin-top:10px;">
+                    <div class="admin-table-empty">Loading sessions…</div>
+                  </div>
+                  <div style="margin-top:10px;">
+                    <span id="sessions-status" style="font-size:13px;color:var(--text-muted);"></span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -246,8 +390,11 @@
 
       wireLogout();
       document.getElementById('settings-form').addEventListener('submit', handleSubmit);
+      document.getElementById('change-password-form').addEventListener('submit', handleChangePassword);
+      document.getElementById('logout-other-devices-btn').addEventListener('click', handleLogoutOtherDevices);
 
       await loadSettings();
+      await loadSessions();
     }
 
     init();
