@@ -15,7 +15,9 @@ async function notifyTelegram(text) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
     });
-    if (!res.ok) {
+    if (res.ok) {
+      console.log('[TELEGRAM] Notification sent.');
+    } else {
       console.error(`[TELEGRAM] Failed to send (${res.status}):`, await res.text());
     }
   } catch (err) {
