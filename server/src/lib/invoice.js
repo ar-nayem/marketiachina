@@ -242,13 +242,31 @@ function renderInvoiceHtml(order, items, settings) {
     color: var(--muted);
   }
   .thanks strong { color: var(--china-red); }
+  .download-pdf-btn {
+    display: flex;
+    justify-content: flex-end;
+    max-width: 780px;
+    margin: 0 auto 14px;
+  }
+  .download-pdf-btn a {
+    display: inline-block;
+    padding: 9px 18px;
+    border-radius: 8px;
+    background: var(--china-red);
+    color: #fff;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+  }
   @media print {
     body { background: #fff; padding: 0; }
     .sheet { box-shadow: none; border: none; border-radius: 0; max-width: 100%; }
+    .download-pdf-btn { display: none; }
   }
 </style>
 </head>
 <body>
+  <div class="download-pdf-btn"><a href="/api/orders/${esc(order.id)}/invoice.pdf?t=${esc(order.access_token)}">⬇ Download PDF</a></div>
   <div class="sheet">
     <div class="band"></div>
     <div class="header">

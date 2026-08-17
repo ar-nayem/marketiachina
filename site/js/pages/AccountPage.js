@@ -155,7 +155,10 @@ export class AccountPage {
         <div class="order-card-items">${itemsSummary} — ${totalQuantity} ${t.auth.accountOrderItems}</div>
         <div class="order-card-bottom">
           <div class="order-card-total">${t.auth.accountOrderTotal}: ৳${o.totalBDT.toLocaleString()}</div>
-          <a href="${o.invoiceUrl}" target="_blank" rel="noopener" class="btn-secondary order-card-invoice-link">${t.auth.accountViewInvoice}</a>
+          <div style="display:flex;gap:8px;">
+            <a href="${o.invoiceUrl}" target="_blank" rel="noopener" class="btn-secondary order-card-invoice-link">${t.auth.accountViewInvoice}</a>
+            <a href="${o.invoicePdfUrl}" target="_blank" rel="noopener" class="btn-secondary order-card-invoice-link">${t.auth.accountDownloadPdf}</a>
+          </div>
         </div>
       </div>
     `;

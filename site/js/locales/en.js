@@ -229,6 +229,7 @@ export const en = {
     successDesc: "Our China logistics coordinator will contact you via WhatsApp with the tracking docket and commercial invoice.",
     trackingNo: "Tracking ID:",
     close: "Close",
+    downloadPdf: "Download PDF",
     gateTitle: "How would you like to check out?",
     gateSubtitle: "Log in to track this order in “My Account”, or continue as a guest with just your email and phone.",
     gateLoginBtn: "Log In / Sign Up",
@@ -314,6 +315,7 @@ export const en = {
     accountOrderItems: "items",
     accountOrderTotal: "Total",
     accountViewInvoice: "View Invoice",
+    accountDownloadPdf: "Download PDF",
     accountStatus: {
       pending: "Pending",
       confirmed: "Confirmed",

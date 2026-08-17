@@ -22,7 +22,7 @@ function getTransporter() {
   return transporter;
 }
 
-function sendMail({ to, subject, html, kind, relatedOrderId = null }) {
+function sendMail({ to, subject, html, kind, relatedOrderId = null, attachments = [] }) {
   const result = db
     .prepare(
       `INSERT INTO mail_outbox (to_email, subject, html_body, kind, related_order_id, sent_at) VALUES (?, ?, ?, ?, ?, NULL)`
@@ -37,7 +37,7 @@ function sendMail({ to, subject, html, kind, relatedOrderId = null }) {
   }
 
   const fromName = process.env.MAIL_FROM_NAME || 'Marketia China';
-  t.sendMail({ from: `"${fromName}" <${process.env.SMTP_USER}>`, to, subject, html })
+  t.sendMail({ from: `"${fromName}" <${process.env.SMTP_USER}>`, to, subject, html, attachments })
     .then(() => {
       db.prepare(`UPDATE mail_outbox SET sent_at = datetime('now') WHERE id = ?`).run(outboxId);
       console.log(`[MAILER] Sent "${subject}" -> ${to} (mail_outbox#${outboxId})`);

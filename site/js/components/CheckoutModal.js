@@ -13,6 +13,7 @@ export class CheckoutModal {
     this.selectedPayment = 'bkash';
     this.orderNumber = '';
     this.invoiceUrl = '';
+    this.invoicePdfUrl = '';
     this.whatsappUrl = '';
     this.errorMessage = '';
     this.render();
@@ -72,6 +73,11 @@ export class CheckoutModal {
               ${this.invoiceUrl ? `
               <a href="${this.invoiceUrl}" target="_blank" rel="noopener noreferrer" class="btn-secondary text-xs px-5 py-3 flex items-center gap-2">
                 <span>🧾 View Invoice</span>
+              </a>
+              ` : ''}
+              ${this.invoicePdfUrl ? `
+              <a href="${this.invoicePdfUrl}" target="_blank" rel="noopener noreferrer" class="btn-secondary text-xs px-5 py-3 flex items-center gap-2">
+                <span>⬇️ ${t.checkout.downloadPdf}</span>
               </a>
               ` : ''}
               <button id="finish-order-btn" class="btn-secondary text-xs px-5 py-3">
@@ -258,6 +264,7 @@ export class CheckoutModal {
 
       this.orderNumber = data.orderNumber || '';
       this.invoiceUrl = data.invoiceUrl || '';
+      this.invoicePdfUrl = data.invoicePdfUrl || '';
       this.whatsappUrl = data.whatsappUrl || '';
       this.step = 'success';
       this.isSubmitting = false;

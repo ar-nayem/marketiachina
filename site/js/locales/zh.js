@@ -229,6 +229,7 @@ export const zh = {
     successDesc: "我们的中国物流专员将通过 WhatsApp / WeChat 与您对接运单号及形式发票 (PI)。",
     trackingNo: "国际运单编号:",
     close: "完成",
+    downloadPdf: "下载 PDF",
     gateTitle: "您希望如何结算？",
     gateSubtitle: "登录后可在“我的账户”中追踪此订单；或仅凭邮箱和电话以访客身份继续。",
     gateLoginBtn: "登录 / 注册",
@@ -314,6 +315,7 @@ export const zh = {
     accountOrderItems: "件商品",
     accountOrderTotal: "总计",
     accountViewInvoice: "查看发票",
+    accountDownloadPdf: "下载 PDF",
     accountStatus: {
       pending: "待处理",
       confirmed: "已确认",

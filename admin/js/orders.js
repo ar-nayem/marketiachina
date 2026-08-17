@@ -235,8 +235,9 @@ function renderOrderDetail() {
       <div style="display:flex;justify-content:space-between;font-weight:800;font-size:16px;margin-top:4px;"><span>Total</span><span>${money(total)}</span></div>
     </div>
 
-    <div>
-      <a href="/api/orders/${o.id}/invoice" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="display:block;text-align:center;text-decoration:none;">View Invoice</a>
+    <div style="display:flex;gap:8px;">
+      <a href="/api/orders/${o.id}/invoice" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="flex:1;text-align:center;text-decoration:none;">View Invoice</a>
+      <a href="/api/orders/${o.id}/invoice.pdf" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="flex:1;text-align:center;text-decoration:none;">Download PDF</a>
     </div>
 
     <div>

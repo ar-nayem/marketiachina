@@ -229,6 +229,7 @@ export const bn = {
     successDesc: "আমাদের চায়না সোর্সিং টিম শীঘ্রই আপনার হোয়াটসঅ্যাপে ট্র্যাকিং আইডি ও ইনভয়েস পাঠাবে।",
     trackingNo: "ট্র্যাকিং নম্বর:",
     close: "বন্ধ করুন",
+    downloadPdf: "PDF ডাউনলোড করুন",
     gateTitle: "কীভাবে অর্ডার করতে চান?",
     gateSubtitle: "লগইন করলে “আমার অ্যাকাউন্ট” থেকে অর্ডার ট্র্যাক করতে পারবেন, অথবা শুধু ইমেইল ও ফোন নম্বর দিয়ে গেস্ট হিসেবে চালিয়ে যান।",
     gateLoginBtn: "লগইন / সাইন আপ",
@@ -314,6 +315,7 @@ export const bn = {
     accountOrderItems: "টি পণ্য",
     accountOrderTotal: "মোট",
     accountViewInvoice: "ইনভয়েস দেখুন",
+    accountDownloadPdf: "PDF ডাউনলোড করুন",
     accountStatus: {
       pending: "পেন্ডিং",
       confirmed: "কনফার্ম হয়েছে",
