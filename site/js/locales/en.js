@@ -323,5 +323,26 @@ export const en = {
       delivered: "Delivered",
       cancelled: "Cancelled"
     }
+  },
+
+  reviews: {
+    sectionTitle: "Customer Reviews",
+    reviewsCountSuffix: "reviews",
+    loadingReviews: "Loading reviews...",
+    loadError: "Couldn't load reviews. Please try again.",
+    noReviewsYet: "No reviews yet — be the first to review this product!",
+    adminReplyLabel: "Marketia China replied:",
+    writeReviewPrompt: "Write a Review",
+    loginToReview: "Log in to write a review",
+    ratingLabel: "Your Rating",
+    titleLabel: "Title (optional)",
+    titlePlaceholder: "Summarize your experience",
+    bodyLabel: "Your Review",
+    bodyPlaceholder: "Share details about quality, shipping, and your experience with this product...",
+    submitBtn: "Submit Review",
+    submitSuccess: "Thank you! Your review will appear after moderation.",
+    errorAlreadyReviewed: "You have already reviewed this product.",
+    errorNotPurchased: "You can only review products you have purchased.",
+    errorGeneric: "Something went wrong. Please try again."
   }
 };

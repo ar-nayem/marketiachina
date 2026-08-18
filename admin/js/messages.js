@@ -11,6 +11,8 @@ const STATUS_BADGE_CLASS = {
 let admin = null;
 let allMessages = [];
 let activeMessage = null;
+let activeReplies = [];
+let activeNotes = [];
 
 function pick(obj, ...keys) {
   for (const key of keys) {
@@ -125,6 +127,11 @@ function renderTable() {
             <div class="admin-row-actions">
               <button type="button" class="btn-secondary view-message-btn" data-id="${m.id}" style="padding:6px 12px;font-size:12px;">View / Reply</button>
             </div>
+            ${
+              m.replyCount || m.noteCount
+                ? `<div style="color:var(--text-muted);font-size:11px;margin-top:4px;text-align:right;">${m.replyCount ? `${m.replyCount} repl${m.replyCount === 1 ? 'y' : 'ies'}` : ''}${m.replyCount && m.noteCount ? ' &middot; ' : ''}${m.noteCount ? `${m.noteCount} note${m.noteCount === 1 ? '' : 's'}` : ''}</div>`
+                : ''
+            }
           </td>
         </tr>
       `
@@ -155,6 +162,59 @@ async function loadMessages() {
   }
 }
 
+function threadEntryHtml(entry) {
+  const isAdmin = entry.senderType === 'admin';
+  return `
+    <div style="display:flex;justify-content:${isAdmin ? 'flex-end' : 'flex-start'};margin-bottom:10px;">
+      <div style="max-width:82%;background:${isAdmin ? 'var(--mc-china-red-light)' : 'var(--bg-tertiary)'};border:1px solid ${isAdmin ? 'var(--mc-china-red)' : 'var(--border-color)'};border-radius:var(--radius-sm);padding:10px 14px;">
+        <div style="white-space:pre-wrap;word-break:break-word;color:var(--text-primary);font-size:13px;line-height:1.5;">${escapeHtml(entry.body || '')}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;text-align:${isAdmin ? 'right' : 'left'};">${escapeHtml(isAdmin ? entry.adminName || 'Admin' : 'Customer')} &middot; ${escapeHtml(formatDate(entry.createdAt))}</div>
+      </div>
+    </div>
+  `;
+}
+
+function buildThreadEntries(m, replies) {
+  const entries = [{ senderType: 'customer', body: m.body, adminName: null, createdAt: m.createdAt }];
+
+  // Older messages replied to via the legacy single-shot PATCH /:id/reply route
+  // (kept live for backward compatibility) only have admin_reply/replied_at set
+  // on the message row itself, not a row in message_replies - fold it into the
+  // thread view too so the history stays visible instead of appearing to vanish.
+  if (m.adminReply) {
+    entries.push({ senderType: 'admin', body: m.adminReply, adminName: 'Admin', createdAt: m.repliedAt || m.createdAt });
+  }
+
+  (replies || []).forEach((r) => entries.push(r));
+
+  entries.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  return entries;
+}
+
+function renderThread() {
+  const container = document.getElementById('message-thread');
+  if (!container) return;
+  container.innerHTML = buildThreadEntries(activeMessage, activeReplies).map(threadEntryHtml).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
+function noteHtml(n) {
+  return `
+    <div style="background:var(--bg-tertiary);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:8px;">
+      <div style="font-size:13px;color:var(--text-primary);white-space:pre-wrap;word-break:break-word;">${escapeHtml(n.note)}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">${escapeHtml(n.adminName || 'Unknown')} &middot; ${escapeHtml(formatDate(n.createdAt))}</div>
+    </div>
+  `;
+}
+
+function renderNotesList() {
+  const list = document.getElementById('message-notes-list');
+  if (!list) return;
+  list.innerHTML = activeNotes.length
+    ? activeNotes.map(noteHtml).join('')
+    : `<div style="color:var(--text-muted);font-size:13px;">No internal notes yet.</div>`;
+}
+
 function renderMessageDetail() {
   const m = activeMessage;
   if (!m) return;
@@ -163,9 +223,7 @@ function renderMessageDetail() {
   const email = pick(m, 'email');
   const phone = pick(m, 'phone');
   const subject = pick(m, 'subject');
-  const body = pick(m, 'body');
   const meta = m.meta;
-  const existingReply = pick(m, 'adminReply', 'admin_reply');
 
   document.getElementById('message-slideover-title').textContent = subject || `Message from ${name}`;
 
@@ -196,39 +254,69 @@ function renderMessageDetail() {
       <div>${escapeHtml(subject || '—')}</div>
     </div>
 
-    <div>
-      <div class="form-label">Message</div>
-      <div style="white-space:pre-wrap;color:var(--text-primary);font-size:13px;line-height:1.6;background:var(--bg-tertiary);padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-color);">${escapeHtml(body || '—')}</div>
-    </div>
-
     ${metaBlock}
-
-    <div>
-      <label class="form-label" for="message-reply-textarea">Admin reply</label>
-      <textarea id="message-reply-textarea" class="form-input" rows="5" placeholder="Type your reply…">${escapeHtml(existingReply)}</textarea>
-    </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
       ${email ? `<a href="mailto:${escapeHtml(email)}?subject=${mailSubject}" class="btn-secondary" style="text-decoration:none;padding:8px 14px;font-size:12px;">Email ${escapeHtml(email)}</a>` : ''}
       ${digits ? `<a href="https://wa.me/${digits}?text=${waText}" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="text-decoration:none;padding:8px 14px;font-size:12px;">WhatsApp ${escapeHtml(phone)}</a>` : ''}
     </div>
+
+    <div>
+      <div class="form-label">Conversation</div>
+      <div id="message-thread" style="max-height:320px;overflow-y:auto;padding:4px 2px;"></div>
+    </div>
+
+    <div>
+      <label class="form-label" for="message-reply-textarea">Reply to customer</label>
+      <textarea id="message-reply-textarea" class="form-input" rows="4" placeholder="Type your reply…"></textarea>
+      <div class="admin-field-error" id="message-reply-error" style="color:var(--mc-china-red);font-size:12px;margin-top:4px;min-height:14px;"></div>
+      <div style="display:flex;justify-content:flex-end;">
+        <button type="button" class="btn-primary" id="message-send-reply-btn">Send Reply</button>
+      </div>
+    </div>
+
+    <div style="margin-top:8px;padding-top:16px;border-top:1px solid var(--border-color);background:var(--mc-gold-light);border-radius:var(--radius-sm);padding:14px;">
+      <div class="form-label" style="margin-bottom:2px;">Internal Notes <span style="font-weight:400;color:var(--text-muted);">(not visible to customer)</span></div>
+      <div id="message-notes-list" style="margin-top:8px;"></div>
+      <label class="form-label" for="message-note-textarea">Add a note</label>
+      <textarea id="message-note-textarea" class="form-input" rows="3" placeholder="Internal note about this conversation…"></textarea>
+      <div class="admin-field-error" id="message-note-error" style="color:var(--mc-china-red);font-size:12px;margin-top:4px;min-height:14px;"></div>
+      <div style="display:flex;justify-content:flex-end;">
+        <button type="button" class="btn-secondary" id="message-add-note-btn">Add Note</button>
+      </div>
+    </div>
   `;
+
+  renderThread();
+  renderNotesList();
+
+  document.getElementById('message-send-reply-btn').addEventListener('click', submitReply);
+  document.getElementById('message-add-note-btn').addEventListener('click', submitNote);
 
   document.getElementById('message-slideover-footer').innerHTML = `
     <button type="button" class="btn-secondary" id="message-close-btn">Close</button>
-    <button type="button" class="btn-primary" id="message-send-reply-btn">Send Reply</button>
   `;
-
   document.getElementById('message-close-btn').addEventListener('click', closeMessageSlideover);
-  document.getElementById('message-send-reply-btn').addEventListener('click', submitReply);
 }
 
 async function openMessage(id) {
   const message = allMessages.find((m) => String(m.id) === String(id));
   if (!message) return;
   activeMessage = message;
+  activeReplies = [];
+  activeNotes = [];
   renderMessageDetail();
   openMessageSlideover();
+
+  try {
+    const data = await apiFetch(`/api/admin/messages/${encodeURIComponent(id)}`);
+    activeMessage = data.message;
+    activeReplies = data.replies || [];
+    activeNotes = data.notes || [];
+    renderMessageDetail();
+  } catch (err) {
+    showError(err.message);
+  }
 }
 
 function openMessageSlideover() {
@@ -244,10 +332,12 @@ function closeMessageSlideover() {
 async function submitReply() {
   if (!activeMessage) return;
   const textarea = document.getElementById('message-reply-textarea');
+  const errorEl = document.getElementById('message-reply-error');
   const reply = textarea ? textarea.value.trim() : '';
 
+  if (errorEl) errorEl.textContent = '';
   if (!reply) {
-    showError('Reply text is required.');
+    if (errorEl) errorEl.textContent = 'Reply text is required.';
     return;
   }
 
@@ -258,30 +348,75 @@ async function submitReply() {
   }
 
   try {
-    await apiFetch(`/api/admin/messages/${activeMessage.id}/reply`, {
-      method: 'PATCH',
-      body: JSON.stringify({ reply }),
+    const data = await apiFetch(`/api/admin/messages/${activeMessage.id}/reply`, {
+      method: 'POST',
+      body: JSON.stringify({ body: reply }),
     });
 
-    activeMessage.adminReply = reply;
+    activeReplies.push(data.reply);
     activeMessage.status = 'replied';
-    activeMessage.repliedAt = new Date().toISOString();
+    activeMessage.repliedAt = data.reply.createdAt;
 
     const listItem = allMessages.find((m) => String(m.id) === String(activeMessage.id));
     if (listItem) {
-      listItem.adminReply = reply;
       listItem.status = 'replied';
+      listItem.replyCount = (listItem.replyCount || 0) + 1;
     }
 
     updateMessageRow(activeMessage);
-    renderMessageDetail();
+    renderThread();
+    if (textarea) textarea.value = '';
     showSuccess('Reply sent.');
   } catch (err) {
-    showError(err.message);
+    if (errorEl) errorEl.textContent = err.message;
+    else showError(err.message);
   } finally {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Send Reply';
+    }
+  }
+}
+
+async function submitNote() {
+  if (!activeMessage) return;
+  const textarea = document.getElementById('message-note-textarea');
+  const errorEl = document.getElementById('message-note-error');
+  const note = textarea ? textarea.value.trim() : '';
+
+  if (errorEl) errorEl.textContent = '';
+  if (!note) {
+    if (errorEl) errorEl.textContent = 'Note text is required.';
+    return;
+  }
+
+  const btn = document.getElementById('message-add-note-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+  }
+
+  try {
+    const data = await apiFetch(`/api/admin/messages/${activeMessage.id}/notes`, {
+      method: 'POST',
+      body: JSON.stringify({ note }),
+    });
+
+    activeNotes.unshift(data.note);
+
+    const listItem = allMessages.find((m) => String(m.id) === String(activeMessage.id));
+    if (listItem) listItem.noteCount = (listItem.noteCount || 0) + 1;
+
+    renderNotesList();
+    if (textarea) textarea.value = '';
+    showSuccess('Note added.');
+  } catch (err) {
+    if (errorEl) errorEl.textContent = err.message;
+    else showError(err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Add Note';
     }
   }
 }

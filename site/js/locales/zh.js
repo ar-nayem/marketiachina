@@ -323,5 +323,26 @@ export const zh = {
       delivered: "已送达",
       cancelled: "已取消"
     }
+  },
+
+  reviews: {
+    sectionTitle: "顾客评价",
+    reviewsCountSuffix: "条评价",
+    loadingReviews: "评价加载中...",
+    loadError: "评价加载失败，请重试。",
+    noReviewsYet: "暂无评价 — 快来发表第一条评价吧！",
+    adminReplyLabel: "Marketia China 回复:",
+    writeReviewPrompt: "发表评价",
+    loginToReview: "登录后发表评价",
+    ratingLabel: "您的评分",
+    titleLabel: "标题（选填）",
+    titlePlaceholder: "简要总结您的使用体验",
+    bodyLabel: "评价内容",
+    bodyPlaceholder: "请分享产品质量、物流时效及整体购物体验...",
+    submitBtn: "提交评价",
+    submitSuccess: "感谢您的评价！审核通过后将展示。",
+    errorAlreadyReviewed: "您已经评价过该产品。",
+    errorNotPurchased: "您只能评价已购买的产品。",
+    errorGeneric: "出现问题，请重试。"
   }
 };

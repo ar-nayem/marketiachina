@@ -283,3 +283,63 @@ CREATE TABLE IF NOT EXISTS customer_notes (
   admin_name TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS shipments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL REFERENCES orders(id),
+  courier TEXT NOT NULL CHECK (courier IN ('mock','pathao','steadfast')),
+  tracking_number TEXT,
+  courier_shipment_id TEXT,
+  courier_status TEXT,
+  label_generated_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Phase 5: reviews, message threading/notes, and an in-admin notification center.
+
+CREATE TABLE IF NOT EXISTS reviews (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id TEXT NOT NULL REFERENCES products(id),
+  customer_id INTEGER NOT NULL REFERENCES customers(id),
+  order_id INTEGER REFERENCES orders(id),
+  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  title TEXT,
+  body TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','hidden')),
+  admin_response TEXT,
+  admin_response_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (product_id, customer_id)
+);
+
+CREATE TABLE IF NOT EXISTS message_replies (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  sender_type TEXT NOT NULL CHECK (sender_type IN ('admin','customer')),
+  body TEXT NOT NULL,
+  admin_id INTEGER REFERENCES admin_users(id),
+  admin_name TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS message_notes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  note TEXT NOT NULL,
+  admin_id INTEGER REFERENCES admin_users(id),
+  admin_name TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT,
+  related_type TEXT,
+  related_id TEXT,
+  is_read INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

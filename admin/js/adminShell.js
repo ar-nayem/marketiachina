@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/admin/orders.html', icon: '🧾', label: 'Orders', key: 'orders' },
   { href: '/admin/returns.html', icon: '↩️', label: 'Returns', key: 'returns' },
   { href: '/admin/messages.html', icon: '💬', label: 'Messages', key: 'messages' },
+  { href: '/admin/reviews.html', icon: '⭐', label: 'Reviews', key: 'reviews' },
   { href: '/admin/leads.html', icon: '🎯', label: 'Leads', key: 'leads' },
   { href: '/admin/customers.html', icon: '👤', label: 'Customers', key: 'customers' },
   { href: '/admin/users.html', icon: '👥', label: 'Users & Roles', key: 'users' },
@@ -47,11 +48,28 @@ export async function requireAdminAuth() {
 }
 
 export function renderSidebar(activeKey, admin) {
+  // Mount the notification bell into its container once this HTML has
+  // actually been inserted into the DOM by the caller. Every page calls
+  // renderSidebar() and inserts its return value synchronously right after
+  // (either via insertAdjacentHTML or interpolated into an innerHTML
+  // assignment) - queueMicrotask fires only after that synchronous work
+  // finishes, so the container is guaranteed to exist by then. A dynamic
+  // import (not a static top-level one) avoids a circular module
+  // dependency, since notificationBell.js itself imports from this file.
+  queueMicrotask(() => {
+    const el = document.getElementById('notification-bell-root');
+    if (el && !el.dataset.mounted) {
+      el.dataset.mounted = '1';
+      import('./notificationBell.js').then(({ mountNotificationBell }) => mountNotificationBell(el));
+    }
+  });
+
   return `
     <aside class="admin-sidebar" id="admin-sidebar">
       <div class="admin-sidebar-brand">
         <div class="mark">MC</div>
         <div class="label">Marketia China<span>Control Panel</span></div>
+        <div id="notification-bell-root" style="margin-left:auto;"></div>
       </div>
       <nav style="display:flex;flex-direction:column;gap:2px;">
         ${NAV_ITEMS.map(item => `

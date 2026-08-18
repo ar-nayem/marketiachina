@@ -6,7 +6,7 @@ const router = express.Router();
 // Builds the exact nested Product shape documented in the API contract from a
 // products row plus its related product_specs / product_wholesale_tiers /
 // product_media rows.
-function buildProduct(row, specRows, tierRows, mediaRows) {
+function buildProduct(row, specRows, tierRows, mediaRows, reviewSummary) {
   const specs = { bn: [], en: [], zh: [] };
   for (const s of specRows) {
     if (specs[s.lang]) specs[s.lang].push({ label: s.label, value: s.value });
@@ -32,8 +32,12 @@ function buildProduct(row, specRows, tierRows, mediaRows) {
     model3dType: row.model_3d_type,
     isFeatured: !!row.is_featured,
     isFactoryDirect: !!row.is_factory_direct,
-    rating: row.rating,
-    reviewsCount: row.reviews_count,
+    // Once a product has at least one real approved review, the real
+    // customer-generated average/count take over from the static
+    // admin-editable fallback columns (used for products with no organic
+    // reviews yet, e.g. seeded demo data).
+    rating: reviewSummary.count > 0 ? reviewSummary.average : row.rating,
+    reviewsCount: reviewSummary.count > 0 ? reviewSummary.count : row.reviews_count,
     priceBDT: row.price_bdt,
     priceUSD: row.price_usd,
     priceCNY: row.price_cny,
@@ -71,8 +75,18 @@ function getMediaRows(productId) {
     .all(productId);
 }
 
+function getReviewSummary(productId) {
+  const row = db
+    .prepare(`SELECT COUNT(*) AS c, AVG(rating) AS avg_rating FROM reviews WHERE product_id = ? AND status = 'approved'`)
+    .get(productId);
+  return {
+    count: row.c,
+    average: row.c > 0 ? Math.round(row.avg_rating * 10) / 10 : null,
+  };
+}
+
 function loadFullProduct(row) {
-  return buildProduct(row, getSpecRows(row.id), getTierRows(row.id), getMediaRows(row.id));
+  return buildProduct(row, getSpecRows(row.id), getTierRows(row.id), getMediaRows(row.id), getReviewSummary(row.id));
 }
 
 router.get('/', (req, res) => {

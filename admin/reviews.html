@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reviews | Marketia China Admin</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/tailwind.build.css" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/glass.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+  <link rel="stylesheet" href="/admin/css/admin.css" />
+
+  <style>
+    .admin-form-section-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--mc-china-red);
+      padding-top: 14px;
+      margin-top: 4px;
+      border-top: 1px solid var(--border-color);
+    }
+    .admin-form-section-title.first {
+      border-top: none;
+      padding-top: 0;
+      margin-top: 0;
+    }
+    textarea.form-input {
+      min-height: 90px;
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 1.5;
+      resize: vertical;
+    }
+    .admin-inline-banner {
+      display: none;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .admin-inline-banner.show { display: block; }
+    .admin-inline-banner.error { background: var(--mc-china-red-light); color: var(--mc-china-red); }
+    .admin-inline-banner.success { background: rgba(16, 163, 74, 0.12); color: #10A34A; }
+    .admin-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      padding: 12px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      z-index: 200;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+    .admin-toast.show { opacity: 1; transform: translateY(0); }
+    .admin-toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+    .admin-toolbar .form-input { margin: 0; }
+    .admin-toolbar-filter { width: 200px; flex: 0 0 auto; }
+    .review-stars { color: #C9A227; letter-spacing: 1px; white-space: nowrap; }
+    .review-body-preview {
+      max-width: 320px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+    .review-title-cell { font-weight: 700; }
+    .review-detail-stars { color: #C9A227; font-size: 20px; letter-spacing: 2px; }
+    .review-detail-body {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      background: var(--bg-tertiary);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin-top: 8px;
+    }
+    .review-status-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .review-status-actions button.active {
+      outline: 2px solid var(--mc-china-red);
+      outline-offset: 1px;
+    }
+    .pending-count-badge {
+      background: var(--mc-gold-light, rgba(201,162,39,0.15));
+      color: #8a6d16;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: var(--radius-full);
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-shell" id="admin-shell">
+    <div class="admin-main">
+      <div class="admin-topbar">
+        <h1>Reviews</h1>
+      </div>
+      <div class="admin-content">
+        <div class="admin-panel">
+          <div id="admin-banner" class="admin-inline-banner"></div>
+          <div class="admin-panel-header">
+            <h2>All Reviews<span class="pending-count-badge" id="pending-count-badge" style="display:none;"></span></h2>
+          </div>
+          <div class="admin-toolbar">
+            <select class="form-input admin-toolbar-filter" id="review-status-filter">
+              <option value="">All Statuses</option>
+              <option value="pending" selected>Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="hidden">Hidden</option>
+            </select>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Customer</th>
+                  <th>Rating</th>
+                  <th>Review</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="reviews-tbody">
+                <tr><td colspan="7"><div class="admin-table-empty">Loading reviews…</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="slideover-overlay"></div>
+
+  <div class="admin-slideover" id="review-slideover">
+    <div class="admin-slideover-header">
+      <h2 id="slideover-title">Moderate Review</h2>
+      <button class="admin-icon-btn" id="slideover-close" type="button" title="Close">✕</button>
+    </div>
+    <div class="admin-slideover-body">
+      <div class="admin-form-section-title first">Product &amp; Customer</div>
+      <div style="font-size:13px;color:var(--text-secondary);">
+        <div><strong id="detail-product-name"></strong></div>
+        <div id="detail-customer-line"></div>
+      </div>
+
+      <div class="admin-form-section-title">Rating</div>
+      <div class="review-detail-stars" id="detail-stars"></div>
+
+      <div class="admin-form-section-title">Review</div>
+      <div id="detail-title" style="font-weight:700;font-size:14px;"></div>
+      <div class="review-detail-body" id="detail-body"></div>
+
+      <div class="admin-form-section-title">Moderation Status</div>
+      <div class="review-status-actions" id="status-actions">
+        <button type="button" class="btn-secondary" data-status="pending">Pending</button>
+        <button type="button" class="btn-secondary" data-status="approved">Approve</button>
+        <button type="button" class="btn-secondary" data-status="rejected">Reject</button>
+        <button type="button" class="btn-secondary" data-status="hidden">Hide</button>
+      </div>
+
+      <div class="admin-form-section-title">Public Admin Response</div>
+      <div class="admin-field-hint" style="margin-bottom:6px;">Shown publicly alongside this review on the product page (e.g. "Thank you for your feedback...").</div>
+      <textarea class="form-input" id="f-adminResponse" placeholder="Write a public reply to this review (optional)…"></textarea>
+      <div style="margin-top:8px;">
+        <button type="button" class="btn-primary" id="save-response-btn">Save Response</button>
+      </div>
+    </div>
+    <div class="admin-slideover-footer">
+      <button class="btn-secondary" id="slideover-cancel" type="button">Close</button>
+    </div>
+  </div>
+
+  <div class="admin-toast" id="admin-toast"></div>
+
+  <script type="module">
+    import { apiFetch, requireAdminAuth, renderSidebar, wireLogout, escapeHtml, formatDate } from './js/adminShell.js';
+
+    let reviews = [];
+    let activeReview = null;
+
+    const STATUS_BADGE_CLASS = {
+      pending: 'admin-badge-gold',
+      approved: 'admin-badge-green',
+      rejected: 'admin-badge-red',
+      hidden: 'admin-badge-neutral',
+    };
+
+    function statusLabel(status) {
+      if (!status) return '';
+      return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+
+    function statusBadge(status) {
+      const cls = STATUS_BADGE_CLASS[status] || 'admin-badge-neutral';
+      return `<span class="admin-badge ${cls}">${escapeHtml(statusLabel(status))}</span>`;
+    }
+
+    function stars(rating, size) {
+      const n = Math.max(0, Math.min(5, Number(rating) || 0));
+      return '★★★★★☆☆☆☆☆'.slice(5 - n, 10 - n);
+    }
+
+    async function loadReviews() {
+      const tbody = document.getElementById('reviews-tbody');
+      try {
+        const statusFilter = document.getElementById('review-status-filter').value;
+        const qs = statusFilter ? `?status=${encodeURIComponent(statusFilter)}` : '';
+        const data = await apiFetch(`/api/admin/reviews${qs}`);
+        reviews = data.reviews || [];
+        renderTable();
+        updatePendingBadge();
+      } catch (err) {
+        showBanner(err.message, 'error');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7"><div class="admin-table-empty">Failed to load reviews.</div></td></tr>';
+      }
+    }
+
+    async function updatePendingBadge() {
+      try {
+        const data = await apiFetch('/api/admin/reviews?status=pending');
+        const badge = document.getElementById('pending-count-badge');
+        const count = (data.reviews || []).length;
+        if (count > 0) {
+          badge.textContent = `${count} pending`;
+          badge.style.display = '';
+        } else {
+          badge.style.display = 'none';
+        }
+      } catch (err) {
+        // non-critical, ignore
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('reviews-tbody');
+      if (!reviews.length) {
+        tbody.innerHTML = '<tr><td colspan="7"><div class="admin-table-empty">No reviews found.</div></td></tr>';
+        return;
+      }
+      tbody.innerHTML = reviews.map(r => `
+        <tr>
+          <td>${escapeHtml(r.productName)}</td>
+          <td>${escapeHtml(r.customerName)}</td>
+          <td><span class="review-stars">${stars(r.rating)}</span></td>
+          <td>
+            ${r.title ? `<div class="review-title-cell">${escapeHtml(r.title)}</div>` : ''}
+            <span class="review-body-preview" title="${escapeHtml(r.body)}">${escapeHtml(r.body)}</span>
+          </td>
+          <td>${statusBadge(r.status)}</td>
+          <td>${escapeHtml(formatDate(r.createdAt))}</td>
+          <td>
+            <div class="admin-row-actions">
+              <button class="admin-icon-btn moderate-btn" data-id="${r.id}" title="Moderate">🛠️</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('.moderate-btn').forEach(btn => btn.addEventListener('click', () => openModerate(btn.dataset.id)));
+    }
+
+    const overlay = document.getElementById('slideover-overlay');
+    const slideover = document.getElementById('review-slideover');
+
+    function openSlideover() {
+      overlay.classList.add('open');
+      slideover.classList.add('open');
+    }
+    function closeSlideover() {
+      overlay.classList.remove('open');
+      slideover.classList.remove('open');
+      activeReview = null;
+    }
+    overlay.addEventListener('click', closeSlideover);
+    document.getElementById('slideover-close').addEventListener('click', closeSlideover);
+    document.getElementById('slideover-cancel').addEventListener('click', closeSlideover);
+
+    function highlightActiveStatus(status) {
+      document.querySelectorAll('#status-actions button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.status === status);
+      });
+    }
+
+    function openModerate(id) {
+      const r = reviews.find(x => String(x.id) === String(id));
+      if (!r) return;
+      activeReview = r;
+
+      document.getElementById('detail-product-name').textContent = r.productName || '';
+      document.getElementById('detail-customer-line').textContent = `${r.customerName || ''} · ${r.customerEmail || ''}`;
+      document.getElementById('detail-stars').textContent = stars(r.rating);
+      document.getElementById('detail-title').textContent = r.title || '';
+      document.getElementById('detail-body').textContent = r.body || '';
+      document.getElementById('f-adminResponse').value = r.adminResponse || '';
+      highlightActiveStatus(r.status);
+
+      openSlideover();
+    }
+
+    document.getElementById('status-actions').addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-status]');
+      if (!btn || !activeReview) return;
+      const newStatus = btn.dataset.status;
+      btn.disabled = true;
+      try {
+        const data = await apiFetch(`/api/admin/reviews/${encodeURIComponent(activeReview.id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: newStatus }),
+        });
+        activeReview = data.review;
+        const idx = reviews.findIndex(x => String(x.id) === String(activeReview.id));
+        if (idx !== -1) reviews[idx] = activeReview;
+        renderTable();
+        updatePendingBadge();
+        highlightActiveStatus(newStatus);
+        showToast('Review status updated');
+      } catch (err) {
+        showBanner(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('save-response-btn').addEventListener('click', async () => {
+      if (!activeReview) return;
+      const btn = document.getElementById('save-response-btn');
+      btn.disabled = true;
+      try {
+        const adminResponse = document.getElementById('f-adminResponse').value.trim() || null;
+        const data = await apiFetch(`/api/admin/reviews/${encodeURIComponent(activeReview.id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ adminResponse }),
+        });
+        activeReview = data.review;
+        const idx = reviews.findIndex(x => String(x.id) === String(activeReview.id));
+        if (idx !== -1) reviews[idx] = activeReview;
+        showToast('Response saved');
+      } catch (err) {
+        showBanner(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('admin-toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    let bannerTimer = null;
+    function showBanner(msg, type) {
+      const el = document.getElementById('admin-banner');
+      el.textContent = msg;
+      el.className = `admin-inline-banner show ${type || 'error'}`;
+      clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(() => el.classList.remove('show'), 5000);
+    }
+
+    (async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+      document.getElementById('admin-shell').insertAdjacentHTML('afterbegin', renderSidebar('reviews', admin));
+      wireLogout();
+
+      document.getElementById('review-status-filter').addEventListener('change', loadReviews);
+
+      await loadReviews();
+    })();
+  </script>
+</body>
+</html>

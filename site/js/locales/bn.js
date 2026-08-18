@@ -323,5 +323,26 @@ export const bn = {
       delivered: "ডেলিভারড",
       cancelled: "বাতিল হয়েছে"
     }
+  },
+
+  reviews: {
+    sectionTitle: "কাস্টমার রিভিউ",
+    reviewsCountSuffix: "টি রিভিউ",
+    loadingReviews: "রিভিউ লোড হচ্ছে...",
+    loadError: "রিভিউ লোড করা যায়নি। আবার চেষ্টা করুন।",
+    noReviewsYet: "এখনো কোনো রিভিউ নেই — এই পণ্যের প্রথম রিভিউটি আপনিই দিন!",
+    adminReplyLabel: "Marketia China এর প্রতিক্রিয়া:",
+    writeReviewPrompt: "রিভিউ লিখুন",
+    loginToReview: "রিভিউ লিখতে লগইন করুন",
+    ratingLabel: "আপনার রেটিং",
+    titleLabel: "শিরোনাম (ঐচ্ছিক)",
+    titlePlaceholder: "সংক্ষেপে আপনার অভিজ্ঞতা লিখুন",
+    bodyLabel: "আপনার রিভিউ",
+    bodyPlaceholder: "পণ্যের মান, ডেলিভারি ও আপনার সামগ্রিক অভিজ্ঞতা সম্পর্কে বিস্তারিত লিখুন...",
+    submitBtn: "রিভিউ সাবমিট করুন",
+    submitSuccess: "ধন্যবাদ! মডারেশনের পর আপনার রিভিউ প্রদর্শিত হবে।",
+    errorAlreadyReviewed: "আপনি ইতিমধ্যে এই পণ্যের রিভিউ দিয়েছেন।",
+    errorNotPurchased: "আপনি শুধুমাত্র ক্রয়কৃত পণ্যের রিভিউ দিতে পারবেন।",
+    errorGeneric: "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।"
   }
 };

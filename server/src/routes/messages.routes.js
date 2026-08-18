@@ -1,5 +1,6 @@
 const express = require('express');
 const { db } = require('../db');
+const { createNotification } = require('../lib/notify');
 
 const router = express.Router();
 
@@ -31,6 +32,14 @@ router.post('/', (req, res) => {
     leadSource,
     result.lastInsertRowid
   );
+
+  createNotification({
+    type: 'message.new',
+    title: 'New customer message',
+    body: `${name}: ${subject || '(no subject)'}`,
+    relatedType: 'message',
+    relatedId: result.lastInsertRowid,
+  });
 
   res.status(201).json({ ok: true });
 });
