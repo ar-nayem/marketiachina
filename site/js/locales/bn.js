@@ -344,5 +344,22 @@ export const bn = {
     errorAlreadyReviewed: "আপনি ইতিমধ্যে এই পণ্যের রিভিউ দিয়েছেন।",
     errorNotPurchased: "আপনি শুধুমাত্র ক্রয়কৃত পণ্যের রিভিউ দিতে পারবেন।",
     errorGeneric: "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।"
+  },
+
+  trackOrder: {
+    title: "অর্ডার ট্র্যাক করুন",
+    subtitle: "আপনার অর্ডার নম্বর এবং চেকআউটে ব্যবহৃত ফোন বা ইমেইল দিন।",
+    orderNumberLabel: "অর্ডার নম্বর",
+    orderNumberPlaceholder: "যেমন MC-BD-2026-12345",
+    contactLabel: "ফোন বা ইমেইল",
+    contactPlaceholder: "চেকআউটে ব্যবহৃত ফোন বা ইমেইল",
+    submitBtn: "অর্ডার ট্র্যাক করুন",
+    trackAnotherBtn: "অন্য অর্ডার ট্র্যাক করুন",
+    itemsLabel: "পণ্যসমূহ",
+    courierLabel: "কুরিয়ার",
+    trackingLabel: "ট্র্যাকিং নম্বর",
+    courierStatusLabel: "কুরিয়ার স্ট্যাটাস",
+    errorNotFound: "এই তথ্য দিয়ে কোনো অর্ডার খুঁজে পাওয়া যায়নি। অর্ডার নম্বর যাচাই করে আবার চেষ্টা করুন।",
+    errorGeneric: "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।"
   }
 };

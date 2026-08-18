@@ -185,6 +185,84 @@
   font-weight: 700;
 }
 
+/* ---------- Track Order result (site/js/pages/TrackOrderPage.js) ---------- */
+
+.track-history {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+
+.track-history-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.track-history-row:last-child {
+  border-bottom: none;
+}
+
+.track-history-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--mc-china-red);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.track-history-status {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.track-history-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.track-shipment-box {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+
+.track-shipment-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.track-shipment-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+
+.track-items {
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+}
+
+.track-item-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: 6px 0;
+}
+
 .auth-footer-links a:hover {
   text-decoration: underline;
 }

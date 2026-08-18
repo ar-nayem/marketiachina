@@ -11,10 +11,17 @@ const STATUS_BADGE_CLASS = {
   cancelled: 'admin-badge-red',
 };
 
+const COURIERS = [
+  { value: 'mock', label: 'Mock (works today — no credentials needed)' },
+  { value: 'pathao', label: 'Pathao' },
+  { value: 'steadfast', label: 'Steadfast' },
+];
+
 let admin = null;
 let allOrders = [];
 let currentFilter = 'all';
 let activeOrder = null;
+let activeShipment = null;
 
 // Some API responses may be snake_case (raw db row) or camelCase (mapped) —
 // read defensively so this page works either way per the contract note.
@@ -162,6 +169,47 @@ async function loadOrders() {
   }
 }
 
+function renderShippingSection(o) {
+  const canShip = Array.isArray(admin?.permissions) && admin.permissions.includes('orders.ship');
+  if (!canShip) return '';
+
+  if (!activeShipment) {
+    const courierOptions = COURIERS.map((c) => `<option value="${c.value}">${escapeHtml(c.label)}</option>`).join('');
+    return `
+      <div style="border-top:1px solid var(--border-color);padding-top:12px;">
+        <div class="form-label">Shipping</div>
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:160px;">
+            <label class="form-label" for="ship-courier-select">Courier</label>
+            <select id="ship-courier-select" class="form-input">${courierOptions}</select>
+          </div>
+          <button type="button" class="btn-primary" id="create-shipment-btn">Create Shipment</button>
+        </div>
+        <div class="admin-field-hint" style="margin-top:6px;">Mock is fully working today. Pathao and Steadfast will work once real API credentials are added.</div>
+        <p id="ship-error" style="color:var(--mc-china-red);font-size:12px;margin-top:6px;"></p>
+      </div>
+    `;
+  }
+
+  const s = activeShipment;
+  return `
+    <div style="border-top:1px solid var(--border-color);padding-top:12px;">
+      <div class="form-label">Shipping</div>
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-weight:700;text-transform:capitalize;">${escapeHtml(s.courier)}</div>
+          <div style="color:var(--text-secondary);font-size:13px;margin-top:2px;">Tracking: ${escapeHtml(s.trackingNumber || '—')}</div>
+          <div style="color:var(--text-secondary);font-size:13px;margin-top:2px;">Status: ${escapeHtml(s.courierStatus || 'unknown')}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <button type="button" class="btn-secondary" id="refresh-shipment-btn" style="padding:6px 12px;font-size:12px;">Refresh Status</button>
+          <a href="/api/admin/orders/${o.id}/label.pdf" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="padding:6px 12px;font-size:12px;text-align:center;text-decoration:none;">Print Label</a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderOrderDetail() {
   const o = activeOrder;
   if (!o) return;
@@ -257,6 +305,8 @@ function renderOrderDetail() {
         : ''}
     </div>
 
+    ${renderShippingSection(o)}
+
     <div style="border-top:1px solid var(--border-color);padding-top:12px;font-size:13px;display:flex;flex-direction:column;gap:6px;">
       <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary);">Subtotal</span><span>${money(subtotal)}</span></div>
       <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary);">Shipping fee</span><span>${money(shippingFee)}</span></div>
@@ -286,12 +336,73 @@ function renderOrderDetail() {
 
   document.getElementById('order-close-btn').addEventListener('click', closeOrderSlideover);
   document.getElementById('order-update-status-btn').addEventListener('click', submitStatusUpdate);
+
+  const createShipBtn = document.getElementById('create-shipment-btn');
+  if (createShipBtn) createShipBtn.addEventListener('click', submitCreateShipment);
+  const refreshShipBtn = document.getElementById('refresh-shipment-btn');
+  if (refreshShipBtn) refreshShipBtn.addEventListener('click', submitRefreshShipmentStatus);
+}
+
+async function submitCreateShipment() {
+  if (!activeOrder) return;
+  const select = document.getElementById('ship-courier-select');
+  const courier = select ? select.value : 'mock';
+  const errEl = document.getElementById('ship-error');
+  if (errEl) errEl.textContent = '';
+
+  const btn = document.getElementById('create-shipment-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Shipping…';
+  }
+
+  try {
+    await apiFetch(`/api/admin/orders/${activeOrder.id}/ship`, {
+      method: 'POST',
+      body: JSON.stringify({ courier }),
+    });
+    // Refetch order + shipment together so status/timeline/shipping panel
+    // all reflect the server's actual resulting state.
+    await openOrder(activeOrder.id);
+  } catch (err) {
+    if (errEl) errEl.textContent = err.message;
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Create Shipment';
+    }
+  }
+}
+
+async function submitRefreshShipmentStatus() {
+  if (!activeShipment) return;
+  const btn = document.getElementById('refresh-shipment-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Refreshing…';
+  }
+  try {
+    const data = await apiFetch(`/api/admin/shipments/${activeShipment.id}/refresh-status`, { method: 'POST' });
+    activeShipment = data.shipment;
+    renderOrderDetail();
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Refresh Status';
+    }
+  }
 }
 
 async function openOrder(id) {
   try {
-    const data = await apiFetch(`/api/admin/orders/${id}`);
-    activeOrder = data.order;
+    const [orderData, shipmentData] = await Promise.all([
+      apiFetch(`/api/admin/orders/${id}`),
+      apiFetch(`/api/admin/orders/${id}/shipment`).catch(() => ({ shipment: null })),
+    ]);
+    activeOrder = orderData.order;
+    activeShipment = shipmentData.shipment || null;
     renderOrderDetail();
     openOrderSlideover();
   } catch (err) {

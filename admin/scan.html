@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scan &amp; Ship | Marketia China Admin</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/tailwind.build.css" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/glass.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+  <link rel="stylesheet" href="/admin/css/admin.css" />
+
+  <style>
+    /* Page-specific hand-authored CSS (no reliance on unproven Tailwind utility classes) */
+    .admin-inline-banner {
+      display: none;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .admin-inline-banner.show { display: block; }
+    .admin-inline-banner.error { background: var(--mc-china-red-light); color: var(--mc-china-red); }
+    .admin-inline-banner.success { background: rgba(16, 163, 74, 0.12); color: #10A34A; }
+
+    .admin-field-error {
+      color: var(--mc-china-red);
+      font-size: 12px;
+      margin-top: 6px;
+      min-height: 14px;
+    }
+    .admin-field-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* Single-column, generously-sized controls: this page is used on a phone
+       in a packing area, not a desktop, so every actionable control gets a
+       large touch target regardless of viewport width. */
+    .scan-wrap {
+      max-width: 560px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .scan-block {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .scan-btn-lg {
+      width: 100%;
+      padding: 14px 18px;
+      font-size: 15px;
+      min-height: 48px;
+      box-sizing: border-box;
+    }
+    .scan-divider {
+      border-top: 1px solid var(--border-color);
+      padding-top: 20px;
+      margin-top: 4px;
+    }
+    .scan-video {
+      display: none;
+      width: 100%;
+      max-width: 100%;
+      border-radius: var(--radius-sm);
+      background: #000;
+      margin-top: 4px;
+    }
+    .scan-order-card {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .scan-order-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .scan-order-total {
+      font-weight: 800;
+      font-size: 18px;
+    }
+    @media (max-width: 480px) {
+      .admin-content { padding: 14px; }
+      .scan-order-row { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-shell" id="admin-shell">
+    <div class="admin-main">
+      <div class="admin-topbar">
+        <h1>Scan &amp; Ship</h1>
+      </div>
+      <div class="admin-content">
+        <div id="admin-banner" class="admin-inline-banner"></div>
+
+        <div class="scan-wrap">
+
+          <!-- Shown instead of everything below when the admin lacks orders.ship -->
+          <div class="admin-panel" id="permission-denied" style="display:none;">
+            <div class="admin-panel-header"><h2>Scan &amp; Ship</h2></div>
+            <div style="padding:36px 20px;text-align:center;color:var(--text-secondary);font-size:14px;">
+              You do not have permission to process shipments.
+            </div>
+          </div>
+
+          <div id="scan-app" style="display:none;flex-direction:column;gap:20px;">
+
+            <!-- Step 1: identify an order (manual entry always available, camera when supported) -->
+            <div class="admin-panel" id="scan-section">
+              <div class="admin-panel-header">
+                <h2>Find an Order</h2>
+              </div>
+              <div style="padding:20px;display:flex;flex-direction:column;gap:20px;">
+
+                <div class="scan-block">
+                  <label class="form-label" for="manual-order-input">Order Number</label>
+                  <input class="form-input" id="manual-order-input" type="text" placeholder="e.g. MC-20260101-0001" autocomplete="off" />
+                  <button class="btn-primary scan-btn-lg" id="manual-find-btn" type="button">Find Order</button>
+                  <div class="admin-field-error" id="manual-error"></div>
+                </div>
+
+                <div class="scan-block scan-divider">
+                  <button class="btn-secondary scan-btn-lg" id="camera-scan-btn" type="button">📷 Scan QR Code</button>
+                  <button class="btn-secondary scan-btn-lg" id="camera-stop-btn" type="button" style="display:none;">Cancel Scan</button>
+                  <div id="camera-unsupported-note" class="admin-field-hint" style="display:none;">
+                    Camera scanning is not supported in this browser — use manual entry above.
+                  </div>
+                  <div class="admin-field-error" id="camera-error"></div>
+                  <video id="camera-video" class="scan-video" autoplay playsinline muted></video>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Step 2: order summary + confirm shipment (filled in by JS) -->
+            <div class="admin-panel" id="order-summary-section" style="display:none;"></div>
+
+            <!-- Step 3: success state (filled in by JS) -->
+            <div class="admin-panel" id="success-section" style="display:none;"></div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { apiFetch, requireAdminAuth, renderSidebar, wireLogout, escapeHtml } from './js/adminShell.js';
+
+    const COURIERS = [
+      { value: 'mock', label: 'Mock (works today — no credentials needed)' },
+      { value: 'pathao', label: 'Pathao' },
+      { value: 'steadfast', label: 'Steadfast' },
+    ];
+
+    const STATUS_BADGE_CLASS = {
+      pending: 'admin-badge-neutral',
+      confirmed: 'admin-badge-gold',
+      shipped: 'admin-badge-gold',
+      delivered: 'admin-badge-green',
+      cancelled: 'admin-badge-red',
+    };
+
+    let admin = null;
+    let activeOrder = null;
+
+    // --- Camera scan state ---
+    let cameraStream = null;
+    let detectPollTimer = null;
+
+    function money(value) {
+      const n = Number(value) || 0;
+      return `৳${n.toLocaleString('en-US')}`;
+    }
+
+    function statusLabel(status) {
+      if (!status) return '';
+      return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+
+    function statusBadge(status) {
+      const cls = STATUS_BADGE_CLASS[status] || 'admin-badge-neutral';
+      return `<span class="admin-badge ${cls}">${escapeHtml(statusLabel(status))}</span>`;
+    }
+
+    let bannerTimer = null;
+    function showBanner(msg, type) {
+      const el = document.getElementById('admin-banner');
+      el.textContent = msg;
+      el.className = `admin-inline-banner show ${type || 'error'}`;
+      clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(() => el.classList.remove('show'), 6000);
+    }
+
+    function setManualError(msg) {
+      document.getElementById('manual-error').textContent = msg || '';
+    }
+
+    function setCameraError(msg) {
+      document.getElementById('camera-error').textContent = msg || '';
+    }
+
+    // --- Camera / BarcodeDetector handling -------------------------------
+
+    function cameraSupported() {
+      return ('BarcodeDetector' in window);
+    }
+
+    function stopCamera() {
+      if (detectPollTimer) {
+        clearInterval(detectPollTimer);
+        detectPollTimer = null;
+      }
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((track) => track.stop());
+        cameraStream = null;
+      }
+      const video = document.getElementById('camera-video');
+      video.srcObject = null;
+      video.style.display = 'none';
+      document.getElementById('camera-scan-btn').style.display = '';
+      document.getElementById('camera-stop-btn').style.display = 'none';
+    }
+
+    function extractOrderNumberFromScannedValue(rawValue) {
+      // The label QR encodes `${SITE_BASE_URL}/admin/scan.html?order=<orderNumber>&t=<accessToken>`.
+      // `t` (accessToken) is read out for shape-completeness / possible future
+      // use, but is not required here — the admin is already authenticated
+      // via their own session, so we only need the order number to drive the
+      // same lookup-by-number path as manual entry.
+      try {
+        const url = new URL(rawValue);
+        const orderNumber = url.searchParams.get('order');
+        if (!orderNumber) return null;
+        return orderNumber;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    async function startCameraScan() {
+      setCameraError('');
+      if (!cameraSupported()) return;
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      } catch (err) {
+        setCameraError(err && err.message ? err.message : 'Could not access the camera.');
+        return;
+      }
+
+      const video = document.getElementById('camera-video');
+      video.srcObject = cameraStream;
+      video.style.display = '';
+      video.play().catch(() => { /* some browsers reject play() before user gesture settles; ignore */ });
+      document.getElementById('camera-scan-btn').style.display = 'none';
+      document.getElementById('camera-stop-btn').style.display = '';
+
+      let detector;
+      try {
+        detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+      } catch (err) {
+        setCameraError('Could not start the QR scanner in this browser.');
+        stopCamera();
+        return;
+      }
+
+      detectPollTimer = setInterval(async () => {
+        if (!cameraStream) return;
+        try {
+          const results = await detector.detect(video);
+          if (results && results.length) {
+            const rawValue = results[0].rawValue;
+            stopCamera();
+            const orderNumber = extractOrderNumberFromScannedValue(rawValue);
+            if (!orderNumber) {
+              setCameraError('Scanned code did not contain a valid order reference.');
+              return;
+            }
+            document.getElementById('manual-order-input').value = orderNumber;
+            await lookupAndSelectByNumber(orderNumber);
+          }
+        } catch (err) {
+          // Transient per-frame detection errors (e.g. video not ready yet)
+          // are expected while the camera warms up — do not surface these.
+        }
+      }, 300);
+    }
+
+    // --- Order lookup / selection -----------------------------------------
+
+    async function lookupAndSelectByNumber(rawNumber) {
+      const target = (rawNumber || '').trim().toLowerCase();
+      if (!target) {
+        setManualError('Enter an order number.');
+        return;
+      }
+      setManualError('');
+      const findBtn = document.getElementById('manual-find-btn');
+      findBtn.disabled = true;
+      findBtn.textContent = 'Searching…';
+      try {
+        const data = await apiFetch('/api/admin/orders');
+        const orders = data.orders || [];
+        const match = orders.find((o) => String(o.orderNumber || '').trim().toLowerCase() === target);
+        if (!match) {
+          setManualError(`Order not found: "${rawNumber.trim()}".`);
+          return;
+        }
+        await selectOrder(match.id);
+      } catch (err) {
+        setManualError(err.message);
+      } finally {
+        findBtn.disabled = false;
+        findBtn.textContent = 'Find Order';
+      }
+    }
+
+    async function selectOrder(orderId) {
+      stopCamera();
+      try {
+        const data = await apiFetch(`/api/admin/orders/${orderId}`);
+        activeOrder = data.order;
+        renderOrderSummary();
+        document.getElementById('scan-section').style.display = 'none';
+        document.getElementById('success-section').style.display = 'none';
+        document.getElementById('order-summary-section').style.display = '';
+      } catch (err) {
+        showBanner(err.message, 'error');
+      }
+    }
+
+    function renderOrderSummary() {
+      const o = activeOrder;
+      const section = document.getElementById('order-summary-section');
+      const items = Array.isArray(o.items) ? o.items : [];
+      const alreadyShipped = o.status === 'shipped' || o.status === 'delivered';
+
+      const courierOptions = COURIERS.map((c) => `<option value="${c.value}">${escapeHtml(c.label)}</option>`).join('');
+
+      const actionHtml = alreadyShipped
+        ? `
+          <div style="padding:16px;background:var(--bg-tertiary);border-radius:var(--radius-sm);font-size:13px;color:var(--text-secondary);">
+            This order is already <strong>${escapeHtml(statusLabel(o.status))}</strong>. No further action is needed.
+          </div>
+          <button class="btn-primary scan-btn-lg" id="scan-another-btn" type="button">Scan Another Order</button>
+        `
+        : `
+          <div class="scan-block">
+            <label class="form-label" for="courier-select">Courier</label>
+            <select class="form-input" id="courier-select">${courierOptions}</select>
+            <div class="admin-field-hint">Mock is fully working today. Pathao and Steadfast will work once real API credentials are added.</div>
+          </div>
+          <div id="ship-error-banner" class="admin-inline-banner error"></div>
+          <button class="btn-primary scan-btn-lg" id="confirm-ship-btn" type="button">Confirm Shipment</button>
+          <button class="btn-secondary scan-btn-lg" id="cancel-select-btn" type="button">Cancel / Scan Another</button>
+        `;
+
+      section.innerHTML = `
+        <div class="admin-panel-header">
+          <h2>Order ${escapeHtml(o.orderNumber)}</h2>
+          ${statusBadge(o.status)}
+        </div>
+        <div style="padding:20px;" class="scan-order-card">
+          <div>
+            <div class="form-label">Customer</div>
+            <div style="font-weight:700;">${escapeHtml(o.customerName)}</div>
+            <div style="color:var(--text-secondary);font-size:13px;margin-top:2px;">${escapeHtml(o.customerPhone)}</div>
+            <div style="color:var(--text-secondary);font-size:13px;margin-top:6px;">${escapeHtml(o.shippingAddress)}</div>
+          </div>
+          <div class="scan-order-row">
+            <div>
+              <div class="form-label">Items</div>
+              <div>${items.length} item${items.length === 1 ? '' : 's'}</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="form-label">Total</div>
+              <div class="scan-order-total">${money(o.totalBdt)}</div>
+            </div>
+          </div>
+          ${actionHtml}
+        </div>
+      `;
+
+      if (alreadyShipped) {
+        document.getElementById('scan-another-btn').addEventListener('click', resetToScan);
+      } else {
+        document.getElementById('confirm-ship-btn').addEventListener('click', submitShipment);
+        document.getElementById('cancel-select-btn').addEventListener('click', resetToScan);
+      }
+    }
+
+    async function submitShipment() {
+      if (!activeOrder) return;
+      const select = document.getElementById('courier-select');
+      const courier = select ? select.value : 'mock';
+      const errBanner = document.getElementById('ship-error-banner');
+      errBanner.classList.remove('show');
+
+      const btn = document.getElementById('confirm-ship-btn');
+      btn.disabled = true;
+      btn.textContent = 'Shipping…';
+
+      try {
+        const data = await apiFetch(`/api/admin/orders/${activeOrder.id}/ship`, {
+          method: 'POST',
+          body: JSON.stringify({ courier }),
+        });
+        renderSuccess(data.shipment, data.order);
+      } catch (err) {
+        // Server error shown verbatim, exactly as returned (no rewording) —
+        // this includes 409 "already shipped" and 400 "courier not
+        // implemented yet" messages.
+        errBanner.textContent = err.message;
+        errBanner.classList.add('show');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Confirm Shipment';
+      }
+    }
+
+    function renderSuccess(shipment, order) {
+      document.getElementById('order-summary-section').style.display = 'none';
+      const section = document.getElementById('success-section');
+      section.innerHTML = `
+        <div class="admin-panel-header">
+          <h2>Shipment Confirmed</h2>
+          <span class="admin-badge admin-badge-green">Shipped</span>
+        </div>
+        <div style="padding:28px 20px;display:flex;flex-direction:column;gap:16px;">
+          <div style="text-align:center;font-size:36px;">📦✅</div>
+          <div style="text-align:center;">
+            <div style="color:var(--text-secondary);font-size:13px;">Order</div>
+            <div style="font-weight:800;font-size:16px;">${escapeHtml(activeOrder ? activeOrder.orderNumber : (order && order.id) || '')}</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="color:var(--text-secondary);font-size:13px;">Tracking Number</div>
+            <div style="font-weight:800;font-size:16px;">${escapeHtml((shipment && shipment.trackingNumber) || '—')}</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="color:var(--text-secondary);font-size:13px;">Courier</div>
+            <div style="font-weight:700;text-transform:capitalize;">${escapeHtml((shipment && shipment.courier) || '')}</div>
+          </div>
+          <button class="btn-primary scan-btn-lg" id="scan-next-btn" type="button">Scan Another Order</button>
+        </div>
+      `;
+      section.style.display = '';
+      document.getElementById('scan-next-btn').addEventListener('click', resetToScan);
+    }
+
+    function resetToScan() {
+      stopCamera();
+      activeOrder = null;
+      document.getElementById('order-summary-section').style.display = 'none';
+      document.getElementById('order-summary-section').innerHTML = '';
+      document.getElementById('success-section').style.display = 'none';
+      document.getElementById('success-section').innerHTML = '';
+      document.getElementById('scan-section').style.display = '';
+      document.getElementById('manual-order-input').value = '';
+      setManualError('');
+      setCameraError('');
+    }
+
+    async function init() {
+      admin = await requireAdminAuth();
+      if (!admin) return;
+
+      document.getElementById('admin-shell').insertAdjacentHTML('afterbegin', renderSidebar('scan', admin));
+      wireLogout();
+
+      const hasPermission = Array.isArray(admin.permissions) && admin.permissions.includes('orders.ship');
+      if (!hasPermission) {
+        document.getElementById('permission-denied').style.display = '';
+        document.getElementById('scan-app').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('permission-denied').style.display = 'none';
+      document.getElementById('scan-app').style.display = 'flex';
+
+      document.getElementById('manual-find-btn').addEventListener('click', () => {
+        lookupAndSelectByNumber(document.getElementById('manual-order-input').value);
+      });
+      document.getElementById('manual-order-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          lookupAndSelectByNumber(document.getElementById('manual-order-input').value);
+        }
+      });
+
+      if (cameraSupported()) {
+        document.getElementById('camera-scan-btn').addEventListener('click', startCameraScan);
+        document.getElementById('camera-stop-btn').addEventListener('click', stopCamera);
+      } else {
+        document.getElementById('camera-scan-btn').style.display = 'none';
+        document.getElementById('camera-unsupported-note').style.display = '';
+      }
+
+      // Auto-lookup when arriving via a printed label's QR URL
+      // (?order=<orderNumber>&t=<accessToken>) rather than a live scan.
+      const params = new URLSearchParams(window.location.search);
+      const orderParam = params.get('order');
+      if (orderParam) {
+        document.getElementById('manual-order-input').value = orderParam;
+        await lookupAndSelectByNumber(orderParam);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

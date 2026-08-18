@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: '/admin/media-library.html', icon: '🖼️', label: 'Media Library', key: 'media-library' },
   { href: '/admin/services.html', icon: '🧭', label: 'Services', key: 'services' },
   { href: '/admin/orders.html', icon: '🧾', label: 'Orders', key: 'orders' },
+  { href: '/admin/scan.html', icon: '📷', label: 'Scan & Ship', key: 'scan' },
   { href: '/admin/returns.html', icon: '↩️', label: 'Returns', key: 'returns' },
   { href: '/admin/messages.html', icon: '💬', label: 'Messages', key: 'messages' },
   { href: '/admin/reviews.html', icon: '⭐', label: 'Reviews', key: 'reviews' },

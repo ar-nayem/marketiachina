@@ -344,5 +344,22 @@ export const zh = {
     errorAlreadyReviewed: "您已经评价过该产品。",
     errorNotPurchased: "您只能评价已购买的产品。",
     errorGeneric: "出现问题，请重试。"
+  },
+
+  trackOrder: {
+    title: "追踪您的订单",
+    subtitle: "请输入订单号以及下单时使用的电话或邮箱。",
+    orderNumberLabel: "订单号",
+    orderNumberPlaceholder: "例如 MC-BD-2026-12345",
+    contactLabel: "电话或邮箱",
+    contactPlaceholder: "下单时使用的电话或邮箱",
+    submitBtn: "追踪订单",
+    trackAnotherBtn: "追踪其他订单",
+    itemsLabel: "商品",
+    courierLabel: "物流公司",
+    trackingLabel: "运单号",
+    courierStatusLabel: "物流状态",
+    errorNotFound: "未找到匹配的订单，请检查订单号后重试。",
+    errorGeneric: "出现问题，请重试。"
   }
 };

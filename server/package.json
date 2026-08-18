@@ -9,10 +9,12 @@
     "seed": "node src/seed.js"
   },
   "dependencies": {
+    "bwip-js": "^4.11.3",
     "dotenv": "^17.4.2",
     "express": "^4.19.2",
     "multer": "^2.2.0",
     "nodemailer": "^9.0.5",
-    "pdfkit": "^0.19.1"
+    "pdfkit": "^0.19.1",
+    "qrcode": "^1.5.4"
   }
 }

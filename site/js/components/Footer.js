@@ -55,6 +55,7 @@ export class Footer {
               <li><a href="#categories" class="hover:text-[#DE2910] transition-colors">${t.nav.categories}</a></li>
               <li><a href="#wholesale" class="hover:text-[#DE2910] transition-colors">${t.nav.wholesale}</a></li>
               <li><a href="#calculator" class="hover:text-[#DE2910] transition-colors">${t.nav.calculator}</a></li>
+              <li><a href="/track-order" class="hover:text-[#DE2910] transition-colors">${t.trackOrder.title}</a></li>
             </ul>
           </div>
 

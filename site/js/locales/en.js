@@ -344,5 +344,22 @@ export const en = {
     errorAlreadyReviewed: "You have already reviewed this product.",
     errorNotPurchased: "You can only review products you have purchased.",
     errorGeneric: "Something went wrong. Please try again."
+  },
+
+  trackOrder: {
+    title: "Track Your Order",
+    subtitle: "Enter your order number and the phone or email you used at checkout.",
+    orderNumberLabel: "Order Number",
+    orderNumberPlaceholder: "e.g. MC-BD-2026-12345",
+    contactLabel: "Phone or Email",
+    contactPlaceholder: "The phone or email used at checkout",
+    submitBtn: "Track Order",
+    trackAnotherBtn: "Track another order",
+    itemsLabel: "Items",
+    courierLabel: "Courier",
+    trackingLabel: "Tracking Number",
+    courierStatusLabel: "Courier Status",
+    errorNotFound: "We couldn't find an order matching those details. Please check your order number and try again.",
+    errorGeneric: "Something went wrong. Please try again."
   }
 };

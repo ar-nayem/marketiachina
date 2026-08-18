@@ -339,4 +339,60 @@ router.get('/:id/invoice.pdf', async (req, res) => {
   }
 });
 
+// GET /track - public, unauthenticated order lookup for guests who don't
+// want to create an account. Requires the order number PLUS the phone or
+// email on file, so a stranger can't browse arbitrary orders by number
+// alone. Both the "wrong phone/email" and "no such order" cases return the
+// exact same generic response, so no one can use this to iteratively probe
+// a real customer's contact details against a known order number - same
+// privacy-preserving principle as the forgot-password flow in auth.routes.js.
+router.get('/track', (req, res) => {
+  const orderNumber = req.query.orderNumber;
+  const phone = req.query.phone;
+  const email = req.query.email;
+
+  if (!orderNumber) {
+    return res.status(400).json({ error: 'Order number is required.' });
+  }
+  if (!phone && !email) {
+    return res.status(400).json({ error: 'Phone or email is required to verify this order.' });
+  }
+
+  const notFound = () => res.status(404).json({ error: 'No order found matching those details.' });
+
+  const order = db.prepare(`SELECT * FROM orders WHERE order_number = ?`).get(orderNumber);
+  if (!order) return notFound();
+
+  const norm = (v) => String(v || '').trim().toLowerCase();
+  const phoneMatches = phone && norm(phone) === norm(order.customer_phone);
+  const emailMatches = email && norm(email) === norm(order.customer_email);
+  if (!phoneMatches && !emailMatches) return notFound();
+
+  const items = db
+    .prepare(`SELECT product_name_snapshot, quantity FROM order_items WHERE order_id = ? ORDER BY id ASC`)
+    .all(order.id);
+
+  const history = db
+    .prepare(`SELECT status, created_at FROM order_status_history WHERE order_id = ? ORDER BY created_at ASC, id ASC`)
+    .all(order.id);
+
+  const shipmentRow = db
+    .prepare(`SELECT courier, tracking_number, courier_status FROM shipments WHERE order_id = ? ORDER BY created_at DESC, id DESC LIMIT 1`)
+    .get(order.id);
+
+  res.json({
+    orderNumber: order.order_number,
+    status: order.status,
+    createdAt: order.created_at,
+    shippingMethod: order.shipping_method,
+    paymentMethod: order.payment_method,
+    totalBdt: order.total_bdt,
+    items: items.map((i) => ({ productName: i.product_name_snapshot, quantity: i.quantity })),
+    history: history.map((h) => ({ status: h.status, createdAt: h.created_at })),
+    shipment: shipmentRow
+      ? { courier: shipmentRow.courier, trackingNumber: shipmentRow.tracking_number, courierStatus: shipmentRow.courier_status }
+      : null,
+  });
+});
+
 module.exports = router;

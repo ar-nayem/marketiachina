@@ -41,6 +41,7 @@ app.use('/api/admin/returns', require('./src/routes/admin-returns.routes'));
 app.use('/api/admin/users', require('./src/routes/admin-users.routes'));
 app.use('/api/admin/roles', require('./src/routes/admin-roles.routes'));
 app.use('/api/admin/activity-logs', require('./src/routes/admin-activity.routes'));
+app.use('/api/admin', require('./src/routes/admin-shipments.routes'));
 app.use('/api/admin', require('./src/routes/admin-misc.routes'));
 
 // --- Pretty routes for the account & service pages ---
@@ -50,6 +51,7 @@ app.get('/signup', (req, res) => res.sendFile(path.join(ACCOUNT_DIR, 'signup.htm
 app.get('/forgot-password', (req, res) => res.sendFile(path.join(ACCOUNT_DIR, 'forgot-password.html')));
 app.get('/reset-password', (req, res) => res.sendFile(path.join(ACCOUNT_DIR, 'reset-password.html')));
 app.get('/account', (req, res) => res.sendFile(path.join(ACCOUNT_DIR, 'account.html')));
+app.get('/track-order', (req, res) => res.sendFile(path.join(SITE_ROOT, 'track-order.html')));
 app.get('/services/:slug', (req, res) => res.sendFile(path.join(SITE_ROOT, 'services', 'detail.html')));
 
 // --- Static roots ---
