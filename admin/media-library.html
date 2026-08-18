@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Media Library | Marketia China Admin</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/tailwind.build.css" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/glass.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+  <link rel="stylesheet" href="/admin/css/admin.css" />
+
+  <style>
+    /* Page-specific hand-authored CSS (no reliance on unproven Tailwind utility classes) */
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 16px;
+      padding: 20px;
+    }
+    .media-tile {
+      position: relative;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .media-tile .thumb-wrap {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: var(--bg-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .media-tile img,
+    .media-tile video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .media-tile .video-badge {
+      font-size: 28px;
+    }
+    .media-tile .caption {
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .media-tile .delete-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 26px;
+      height: 26px;
+      border-radius: var(--radius-full);
+      border: none;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+    .media-tile .delete-btn:hover {
+      background: var(--mc-china-red);
+    }
+    .admin-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      padding: 12px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      z-index: 200;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+    .admin-toast.show { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+  <div class="admin-shell" id="admin-shell">
+    <div class="admin-main">
+      <div class="admin-topbar">
+        <h1>Media Library</h1>
+      </div>
+      <div class="admin-content">
+        <div class="admin-panel">
+          <div class="admin-panel-header">
+            <h2>Uploaded Media</h2>
+          </div>
+          <div id="media-container">
+            <div class="admin-table-empty">Loading media…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="admin-toast" id="admin-toast"></div>
+
+  <script type="module">
+    import { apiFetch, requireAdminAuth, renderSidebar, wireLogout, escapeHtml, formatDate } from './js/adminShell.js';
+
+    let mediaItems = [];
+
+    function renderGrid() {
+      const container = document.getElementById('media-container');
+      if (!mediaItems.length) {
+        container.innerHTML = '<div class="admin-table-empty">No uploaded media yet. Upload images while creating or editing a product.</div>';
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="media-grid">
+          ${mediaItems.map(item => `
+            <div class="media-tile" data-id="${escapeHtml(item.id)}">
+              <button class="delete-btn" data-id="${escapeHtml(item.id)}" title="Delete">✕</button>
+              <div class="thumb-wrap">
+                ${item.type === 'video'
+                  ? `<video src="${escapeHtml(item.url)}" muted></video>`
+                  : `<img src="${escapeHtml(item.url)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'video-badge',textContent:'🖼️'}))" />`}
+              </div>
+              <div class="caption" title="${escapeHtml(item.productName || '')}">${escapeHtml(item.productName || 'Unknown product')}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      container.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => handleDelete(btn.dataset.id));
+      });
+    }
+
+    async function loadMedia() {
+      try {
+        const data = await apiFetch('/api/admin/media');
+        mediaItems = data.media || [];
+        renderGrid();
+      } catch (err) {
+        const container = document.getElementById('media-container');
+        container.innerHTML = `<div class="admin-table-empty">${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    async function handleDelete(id) {
+      if (!confirm('Delete this media file? This cannot be undone.')) return;
+      try {
+        await apiFetch(`/api/admin/media/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        mediaItems = mediaItems.filter(m => String(m.id) !== String(id));
+        renderGrid();
+        showToast('Media deleted');
+      } catch (err) {
+        showToast(err.message);
+      }
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('admin-toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    (async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+      document.getElementById('admin-shell').insertAdjacentHTML('afterbegin', renderSidebar('media-library', admin));
+      wireLogout();
+      await loadMedia();
+    })();
+  </script>
+</body>
+</html>

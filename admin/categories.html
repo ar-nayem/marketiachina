@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Categories | Marketia China Admin</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/tailwind.build.css" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/glass.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+  <link rel="stylesheet" href="/admin/css/admin.css" />
+
+  <style>
+    /* Page-specific hand-authored CSS (no reliance on unproven Tailwind utility classes) */
+    .admin-thumb {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      background: var(--bg-tertiary);
+      display: block;
+    }
+    .admin-thumb-empty {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .admin-form-section-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--mc-china-red);
+      padding-top: 14px;
+      margin-top: 4px;
+      border-top: 1px solid var(--border-color);
+    }
+    .admin-form-section-title.first {
+      border-top: none;
+      padding-top: 0;
+      margin-top: 0;
+    }
+    .admin-form-row {
+      display: flex;
+      gap: 12px;
+    }
+    .admin-form-row > div {
+      flex: 1;
+      min-width: 0;
+    }
+    .admin-checkbox-group {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+    .admin-checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .admin-checkbox-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--mc-china-red);
+    }
+    .admin-checkbox-row label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    textarea.form-input {
+      min-height: 70px;
+      font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      resize: vertical;
+    }
+    .admin-field-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .admin-field-error {
+      color: var(--mc-china-red);
+      font-size: 12px;
+      margin-top: 4px;
+      min-height: 14px;
+    }
+    .admin-inline-banner {
+      display: none;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .admin-inline-banner.show { display: block; }
+    .admin-inline-banner.error { background: var(--mc-china-red-light); color: var(--mc-china-red); }
+    .admin-inline-banner.success { background: rgba(16, 163, 74, 0.12); color: #10A34A; }
+    .admin-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      padding: 12px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      z-index: 200;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+    .admin-toast.show { opacity: 1; transform: translateY(0); }
+
+    /* Single-image upload control (image / banner image fields) */
+    .admin-upload-control {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .admin-upload-preview {
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-tertiary);
+      object-fit: cover;
+      display: block;
+      flex-shrink: 0;
+    }
+    .admin-upload-preview-empty {
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .admin-upload-control input[type="file"] {
+      font-size: 12px;
+      color: var(--text-secondary);
+      flex: 1;
+      min-width: 0;
+    }
+    .admin-upload-status {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    @media (max-width: 640px) {
+      .admin-form-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-shell" id="admin-shell">
+    <div class="admin-main">
+      <div class="admin-topbar">
+        <h1>Categories</h1>
+      </div>
+      <div class="admin-content">
+        <div class="admin-panel">
+          <div id="admin-banner" class="admin-inline-banner"></div>
+          <div class="admin-panel-header">
+            <h2>All Categories</h2>
+            <button id="add-category-btn" class="btn-primary" type="button">+ Add Category</button>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Image</th>
+                  <th>Name</th>
+                  <th>Slug</th>
+                  <th>Products</th>
+                  <th>Status</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="categories-tbody">
+                <tr><td colspan="6"><div class="admin-table-empty">Loading categories…</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide-over backdrop (reuses storefront .modal-overlay) -->
+  <div class="modal-overlay" id="slideover-overlay"></div>
+
+  <!-- Category create/edit slide-over -->
+  <div class="admin-slideover" id="category-slideover">
+    <div class="admin-slideover-header">
+      <h2 id="slideover-title">Add Category</h2>
+      <button class="admin-icon-btn" id="slideover-close" type="button" title="Close">✕</button>
+    </div>
+    <div class="admin-slideover-body">
+      <form id="category-form">
+        <div class="admin-form-section-title first">Basic Info</div>
+        <div>
+          <label class="form-label">Slug</label>
+          <input class="form-input" id="f-slug" type="text" placeholder="e.g. home-decor" />
+          <div class="admin-field-hint" id="slug-hint">Lowercase, kebab-case (letters, numbers, hyphens only).</div>
+          <div class="admin-field-error" id="err-slug"></div>
+        </div>
+        <div>
+          <label class="form-label">Sort Order</label>
+          <input class="form-input" id="f-sortOrder" type="number" step="1" min="0" />
+        </div>
+        <div class="admin-checkbox-row">
+          <input type="checkbox" id="f-isActive" />
+          <label for="f-isActive">Active</label>
+        </div>
+
+        <div class="admin-form-section-title">Name</div>
+        <div>
+          <label class="form-label">Name (Bengali)</label>
+          <input class="form-input" id="f-name-bn" type="text" />
+        </div>
+        <div>
+          <label class="form-label">Name (English) *</label>
+          <input class="form-input" id="f-name-en" type="text" />
+          <div class="admin-field-error" id="err-name-en"></div>
+        </div>
+        <div>
+          <label class="form-label">Name (Chinese)</label>
+          <input class="form-input" id="f-name-zh" type="text" />
+        </div>
+
+        <div class="admin-form-section-title">Description</div>
+        <div>
+          <label class="form-label">Description (Bengali)</label>
+          <textarea class="form-input" id="f-desc-bn"></textarea>
+        </div>
+        <div>
+          <label class="form-label">Description (English)</label>
+          <textarea class="form-input" id="f-desc-en"></textarea>
+        </div>
+        <div>
+          <label class="form-label">Description (Chinese)</label>
+          <textarea class="form-input" id="f-desc-zh"></textarea>
+        </div>
+
+        <div class="admin-form-section-title">SEO</div>
+        <div>
+          <label class="form-label">SEO Description</label>
+          <textarea class="form-input" id="f-seoDescription"></textarea>
+          <div class="admin-field-hint">Used in the category page's meta description for search engines.</div>
+        </div>
+
+        <div class="admin-form-section-title">Media</div>
+        <div>
+          <label class="form-label">Image</label>
+          <div class="admin-upload-control">
+            <img class="admin-upload-preview" id="preview-image" style="display:none;" alt="" />
+            <div class="admin-upload-preview-empty" id="preview-image-empty">🖼️</div>
+            <input type="file" id="file-image" accept="image/*" />
+          </div>
+          <div class="admin-upload-status" id="status-image"></div>
+        </div>
+        <div>
+          <label class="form-label">Banner Image</label>
+          <div class="admin-upload-control">
+            <img class="admin-upload-preview" id="preview-bannerImage" style="display:none;" alt="" />
+            <div class="admin-upload-preview-empty" id="preview-bannerImage-empty">🖼️</div>
+            <input type="file" id="file-bannerImage" accept="image/*" />
+          </div>
+          <div class="admin-upload-status" id="status-bannerImage"></div>
+        </div>
+        <div>
+          <label class="form-label">Video URL</label>
+          <input class="form-input" id="f-videoUrl" type="text" placeholder="https://youtube.com/watch?v=... or any video link" />
+        </div>
+      </form>
+    </div>
+    <div class="admin-slideover-footer">
+      <button class="btn-secondary" id="slideover-cancel" type="button">Cancel</button>
+      <button class="btn-primary" id="slideover-save" type="submit" form="category-form">Save Category</button>
+    </div>
+  </div>
+
+  <div class="admin-toast" id="admin-toast"></div>
+
+  <script type="module">
+    import { apiFetch, requireAdminAuth, renderSidebar, wireLogout, escapeHtml } from './js/adminShell.js';
+
+    let categories = [];
+    let editingId = null;
+    // Holds the current image/bannerImage URL values for the open form (kept
+    // outside the DOM inputs since these fields are populated via upload, not typed).
+    let mediaValues = { image: '', bannerImage: '' };
+
+    function imgSrc(path) {
+      if (!path) return '';
+      if (/^https?:\/\//i.test(path) || /^data:/i.test(path) || path.startsWith('/')) return path;
+      return '/' + path.replace(/^\.?\//, '');
+    }
+
+    // apiFetch always sets Content-Type: application/json, which breaks multipart
+    // uploads, so this small local helper posts FormData directly and mirrors
+    // apiFetch's error-throwing convention.
+    async function uploadFile(file) {
+      const formData = new FormData();
+      formData.append('files', file);
+      const res = await fetch('/api/admin/media/upload', { method: 'POST', body: formData });
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (_) {
+        /* no body */
+      }
+      if (!res.ok) {
+        throw new Error((data && data.error) || `Upload failed (${res.status})`);
+      }
+      return data;
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('categories-tbody');
+      if (!categories.length) {
+        tbody.innerHTML = '<tr><td colspan="6"><div class="admin-table-empty">No categories yet. Click "Add Category" to create one.</div></td></tr>';
+        return;
+      }
+      tbody.innerHTML = categories.map(c => {
+        const nameEn = (c.name && c.name.en) || '';
+        const img = c.image
+          ? `<img class="admin-thumb" src="${escapeHtml(imgSrc(c.image))}" alt="" onerror="this.outerHTML='<div class=&quot;admin-thumb-empty&quot;>🗂️</div>'" />`
+          : '<div class="admin-thumb-empty">🗂️</div>';
+        const badge = c.isActive
+          ? '<span class="admin-badge admin-badge-green">Active</span>'
+          : '<span class="admin-badge admin-badge-neutral">Inactive</span>';
+        const actionBtn = c.isActive
+          ? `<button class="admin-icon-btn delete-btn" data-id="${escapeHtml(c.id)}" title="Delete">🗑️</button>`
+          : `<button class="admin-icon-btn restore-btn" data-id="${escapeHtml(c.id)}" title="Restore">♻️</button>`;
+        return `
+          <tr>
+            <td>${img}</td>
+            <td>${escapeHtml(nameEn)}</td>
+            <td>${escapeHtml(c.slug)}</td>
+            <td>${escapeHtml(c.productCount)}</td>
+            <td>${badge}</td>
+            <td>
+              <div class="admin-row-actions">
+                <button class="admin-icon-btn edit-btn" data-id="${escapeHtml(c.id)}" title="Edit">✏️</button>
+                ${actionBtn}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      tbody.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', () => openEdit(btn.dataset.id)));
+      tbody.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', () => handleDelete(btn.dataset.id)));
+      tbody.querySelectorAll('.restore-btn').forEach(btn => btn.addEventListener('click', () => handleRestore(btn.dataset.id)));
+    }
+
+    async function loadCategories() {
+      try {
+        const data = await apiFetch('/api/admin/categories');
+        categories = data.categories || [];
+        renderTable();
+      } catch (err) {
+        showBanner(err.message, 'error');
+      }
+    }
+
+    const overlay = document.getElementById('slideover-overlay');
+    const slideover = document.getElementById('category-slideover');
+
+    function openSlideover() {
+      overlay.classList.add('open');
+      slideover.classList.add('open');
+    }
+    function closeSlideover() {
+      overlay.classList.remove('open');
+      slideover.classList.remove('open');
+      editingId = null;
+    }
+    overlay.addEventListener('click', closeSlideover);
+    document.getElementById('slideover-close').addEventListener('click', closeSlideover);
+    document.getElementById('slideover-cancel').addEventListener('click', closeSlideover);
+
+    function updatePreview(field) {
+      const url = mediaValues[field];
+      const img = document.getElementById(`preview-${field}`);
+      const empty = document.getElementById(`preview-${field}-empty`);
+      if (url) {
+        img.src = imgSrc(url);
+        img.style.display = '';
+        empty.style.display = 'none';
+      } else {
+        img.style.display = 'none';
+        img.removeAttribute('src');
+        empty.style.display = '';
+      }
+    }
+
+    function wireUploadControl(field) {
+      const input = document.getElementById(`file-${field}`);
+      const status = document.getElementById(`status-${field}`);
+      input.addEventListener('change', async () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        status.textContent = 'Uploading…';
+        try {
+          const data = await uploadFile(file);
+          const url = data.files && data.files[0] && data.files[0].url;
+          if (!url) throw new Error('Upload response missing file URL.');
+          mediaValues[field] = url;
+          updatePreview(field);
+          status.textContent = 'Uploaded.';
+        } catch (err) {
+          status.textContent = '';
+          showBanner(err.message, 'error');
+        } finally {
+          input.value = '';
+        }
+      });
+    }
+    wireUploadControl('image');
+    wireUploadControl('bannerImage');
+
+    function fillForm(c) {
+      const f = id => document.getElementById(id);
+      f('f-slug').value = c ? c.slug : '';
+      f('f-slug').readOnly = !!c;
+      document.getElementById('slug-hint').textContent = c
+        ? 'Slug cannot be changed after creation — changing a live slug could break bookmarked/linked category URLs.'
+        : 'Lowercase, kebab-case (letters, numbers, hyphens only).';
+      f('f-sortOrder').value = c && c.sortOrder !== undefined && c.sortOrder !== null ? c.sortOrder : 0;
+      f('f-isActive').checked = c ? !!c.isActive : true;
+      ['bn', 'en', 'zh'].forEach(lang => {
+        f(`f-name-${lang}`).value = (c && c.name && c.name[lang]) || '';
+        f(`f-desc-${lang}`).value = (c && c.description && c.description[lang]) || '';
+      });
+      f('f-seoDescription').value = (c && c.seoDescription) || '';
+      f('f-videoUrl').value = (c && c.videoUrl) || '';
+      mediaValues = { image: (c && c.image) || '', bannerImage: (c && c.bannerImage) || '' };
+      document.getElementById('status-image').textContent = '';
+      document.getElementById('status-bannerImage').textContent = '';
+      updatePreview('image');
+      updatePreview('bannerImage');
+    }
+
+    function clearFieldErrors() {
+      document.querySelectorAll('.admin-field-error').forEach(el => { el.textContent = ''; });
+    }
+    function setFieldError(id, msg) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = msg || '';
+    }
+
+    function openCreate() {
+      editingId = null;
+      document.getElementById('slideover-title').textContent = 'Add Category';
+      clearFieldErrors();
+      fillForm(null);
+      openSlideover();
+    }
+
+    function openEdit(id) {
+      const c = categories.find(x => String(x.id) === String(id));
+      if (!c) return;
+      editingId = c.id;
+      document.getElementById('slideover-title').textContent = 'Edit Category';
+      clearFieldErrors();
+      fillForm(c);
+      openSlideover();
+    }
+
+    function collectPayload() {
+      clearFieldErrors();
+      let ok = true;
+      const f = id => document.getElementById(id);
+
+      const slug = f('f-slug').value.trim();
+      const nameEn = f('f-name-en').value.trim();
+
+      if (!editingId) {
+        if (!slug || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
+          setFieldError('err-slug', 'Slug is required and must be lowercase kebab-case (e.g. "home-decor").');
+          ok = false;
+        }
+      }
+      if (!nameEn) {
+        setFieldError('err-name-en', 'English name is required.');
+        ok = false;
+      }
+
+      if (!ok) return null;
+
+      const sortOrderRaw = f('f-sortOrder').value;
+
+      return {
+        slug,
+        name: { bn: f('f-name-bn').value.trim(), en: nameEn, zh: f('f-name-zh').value.trim() },
+        description: { bn: f('f-desc-bn').value.trim(), en: f('f-desc-en').value.trim(), zh: f('f-desc-zh').value.trim() },
+        seoDescription: f('f-seoDescription').value.trim(),
+        image: mediaValues.image || '',
+        bannerImage: mediaValues.bannerImage || '',
+        videoUrl: f('f-videoUrl').value.trim(),
+        isActive: f('f-isActive').checked,
+        sortOrder: sortOrderRaw !== '' ? parseInt(sortOrderRaw, 10) : 0
+      };
+    }
+
+    document.getElementById('category-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = collectPayload();
+      if (!payload) return;
+      const saveBtn = document.getElementById('slideover-save');
+      saveBtn.disabled = true;
+      try {
+        if (editingId) {
+          await apiFetch(`/api/admin/categories/${encodeURIComponent(editingId)}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+          });
+        } else {
+          await apiFetch('/api/admin/categories', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+        }
+        closeSlideover();
+        showToast(editingId ? 'Category updated' : 'Category created');
+        await loadCategories();
+      } catch (err) {
+        showBanner(err.message, 'error');
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    async function handleDelete(id) {
+      if (!confirm('Delete this category? It will be hidden from the storefront but can be restored later.')) return;
+      try {
+        await apiFetch(`/api/admin/categories/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        showToast('Category deleted');
+        await loadCategories();
+      } catch (err) {
+        showBanner(err.message, 'error');
+      }
+    }
+
+    async function handleRestore(id) {
+      try {
+        await apiFetch(`/api/admin/categories/${encodeURIComponent(id)}/restore`, { method: 'POST' });
+        showToast('Category restored');
+        await loadCategories();
+      } catch (err) {
+        showBanner(err.message, 'error');
+      }
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('admin-toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    let bannerTimer = null;
+    function showBanner(msg, type) {
+      const el = document.getElementById('admin-banner');
+      el.textContent = msg;
+      el.className = `admin-inline-banner show ${type || 'error'}`;
+      clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(() => el.classList.remove('show'), 5000);
+    }
+
+    (async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+      document.getElementById('admin-shell').insertAdjacentHTML('afterbegin', renderSidebar('categories', admin));
+      wireLogout();
+      document.getElementById('add-category-btn').addEventListener('click', openCreate);
+      await loadCategories();
+    })();
+  </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 const { db } = require('./db');
 const { hashPassword } = require('./lib/password');
+const { runMigrations } = require('./lib/migrations');
 const products = require('./seed-data/products.seed');
 const services = require('./seed-data/services.seed');
 
@@ -110,6 +111,12 @@ function runSeed() {
   seedServices();
   seedSettings();
   const admin = seedAdmin();
+
+  // Migrations that depend on seeded data (e.g. categories backfilled from
+  // product rows) run once at db.js boot, before this seed step has run on a
+  // fresh install. Re-running here (idempotent) lets those steps complete in
+  // the same boot instead of waiting for a restart.
+  runMigrations(db);
 
   console.log('Seed complete.');
   console.log(`Products: ${db.prepare('SELECT COUNT(*) c FROM products').get().c}`);

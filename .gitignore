@@ -3,5 +3,6 @@ node_modules/
 server/data/*.sqlite3
 server/data/*.sqlite3-shm
 server/data/*.sqlite3-wal
+server/data/uploads/
 .env
 .env.local

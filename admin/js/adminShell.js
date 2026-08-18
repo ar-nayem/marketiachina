@@ -4,6 +4,8 @@
 const NAV_ITEMS = [
   { href: '/admin/dashboard.html', icon: '📊', label: 'Dashboard', key: 'dashboard' },
   { href: '/admin/products.html', icon: '📦', label: 'Products', key: 'products' },
+  { href: '/admin/categories.html', icon: '🗂️', label: 'Categories', key: 'categories' },
+  { href: '/admin/media-library.html', icon: '🖼️', label: 'Media Library', key: 'media-library' },
   { href: '/admin/services.html', icon: '🧭', label: 'Services', key: 'services' },
   { href: '/admin/orders.html', icon: '🧾', label: 'Orders', key: 'orders' },
   { href: '/admin/messages.html', icon: '💬', label: 'Messages', key: 'messages' },

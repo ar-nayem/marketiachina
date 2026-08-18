@@ -211,3 +211,27 @@ CREATE TABLE IF NOT EXISTS admin_password_reset_tokens (
   used_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug TEXT NOT NULL UNIQUE,
+  name_bn TEXT, name_en TEXT NOT NULL, name_zh TEXT,
+  description_bn TEXT, description_en TEXT, description_zh TEXT,
+  seo_description TEXT,
+  image TEXT,
+  banner_image TEXT,
+  video_url TEXT,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS product_media (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  media_type TEXT NOT NULL DEFAULT 'image' CHECK (media_type IN ('image','video')),
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

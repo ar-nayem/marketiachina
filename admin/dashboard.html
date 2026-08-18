@@ -38,6 +38,52 @@
     color: var(--text-muted);
     margin-top: 2px;
   }
+
+  .admin-revenue-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 16px;
+  }
+
+  .admin-revenue-row .admin-stat-tile .value {
+    font-size: 20px;
+  }
+
+  .admin-status-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .admin-status-pills .admin-badge {
+    font-size: 13px;
+  }
+
+  .admin-chart-wrap svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .admin-chart-axis {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  .admin-mini-panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 980px) {
+    .admin-mini-panels {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
 </head>
 <body>
@@ -78,6 +124,58 @@
             ${renderStatTile('—', 'New Leads (7d)')}
             ${renderStatTile('—', 'New Messages (7d)')}
             ${renderStatTile('—', 'Active Products')}
+          </div>
+
+          <section class="admin-panel">
+            <div class="admin-panel-header">
+              <h2>Revenue Breakdown</h2>
+            </div>
+            <div class="admin-revenue-row" id="admin-revenue-row">
+              ${renderStatTile('—', 'Today')}
+              ${renderStatTile('—', 'Yesterday')}
+              ${renderStatTile('—', 'This Week')}
+              ${renderStatTile('—', 'This Month')}
+              ${renderStatTile('—', 'This Year')}
+            </div>
+          </section>
+
+          <section class="admin-panel">
+            <div class="admin-panel-header">
+              <h2>Revenue - Last 30 Days</h2>
+            </div>
+            <div class="admin-chart-wrap" id="admin-revenue-chart">
+              <div class="admin-table-empty">Loading…</div>
+            </div>
+          </section>
+
+          <div class="admin-mini-panels">
+            <section class="admin-panel">
+              <div class="admin-panel-header">
+                <h2>Orders by Status</h2>
+              </div>
+              <div class="admin-status-pills" id="admin-orders-by-status">
+                <span class="admin-table-empty">Loading…</span>
+              </div>
+            </section>
+
+            <section class="admin-panel">
+              <div class="admin-panel-header">
+                <h2>Products by Status</h2>
+              </div>
+              <div class="admin-status-pills" id="admin-products-by-status">
+                <span class="admin-table-empty">Loading…</span>
+              </div>
+            </section>
+
+            <section class="admin-panel">
+              <div class="admin-panel-header">
+                <h2>Customers</h2>
+              </div>
+              <div class="admin-revenue-row" id="admin-customers-row">
+                ${renderStatTile('—', 'Total Customers')}
+                ${renderStatTile('—', 'New This Week')}
+              </div>
+            </section>
           </div>
 
           <div class="admin-dashboard-panels">
@@ -157,6 +255,45 @@
     return null;
   }
 
+  function renderBdt(value) {
+    return '৳' + Number(value || 0).toLocaleString();
+  }
+
+  function renderStatusPills(counts, labels) {
+    return Object.keys(labels).map((key) => {
+      const count = Number(counts[key] || 0);
+      return `<span class="admin-badge ${statusBadgeClass(key)}">${escapeHtml(labels[key])}: ${count.toLocaleString()}</span>`;
+    }).join('');
+  }
+
+  function shortDate(iso) {
+    // 'YYYY-MM-DD' -> e.g. "17 Jul", using the same UTC date parts as the API.
+    const [y, m, d] = String(iso || '').split('-').map(Number);
+    if (!y || !m || !d) return iso || '';
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${d} ${months[m - 1]}`;
+  }
+
+  function renderRevenueChart(trend) {
+    const days = trend || [];
+    const maxRevenue = Math.max(...days.map(t => t.revenue), 1);
+    const bars = days.map((day, index) => {
+      const barHeight = (day.revenue / maxRevenue) * 70;
+      const x = index * 10;
+      const y = 80 - barHeight;
+      return `<rect x="${x}" y="${y}" width="8" height="${barHeight}" fill="#DE2910"><title>${escapeHtml(day.date)}: ৳${Number(day.revenue || 0).toLocaleString()}</title></rect>`;
+    }).join('');
+    const firstLabel = days.length ? shortDate(days[0].date) : '';
+    const lastLabel = days.length ? shortDate(days[days.length - 1].date) : '';
+    return `
+      <svg viewBox="0 0 300 80" xmlns="http://www.w3.org/2000/svg">${bars}</svg>
+      <div class="admin-chart-axis">
+        <span>${escapeHtml(firstLabel)}</span>
+        <span>${escapeHtml(lastLabel)}</span>
+      </div>
+    `;
+  }
+
   async function loadStats() {
     try {
       const data = await apiFetch('/api/admin/stats');
@@ -169,6 +306,33 @@
         renderStatTile(Number(data.newMessages7d || 0).toLocaleString(), 'New Messages (7d)'),
         renderStatTile(Number(data.productCount || 0).toLocaleString(), 'Active Products')
       ].join('');
+
+      const rev = data.revenue || {};
+      document.getElementById('admin-revenue-row').innerHTML = [
+        renderStatTile(renderBdt(rev.today), 'Today'),
+        renderStatTile(renderBdt(rev.yesterday), 'Yesterday'),
+        renderStatTile(renderBdt(rev.thisWeek), 'This Week'),
+        renderStatTile(renderBdt(rev.thisMonth), 'This Month'),
+        renderStatTile(renderBdt(rev.thisYear), 'This Year')
+      ].join('');
+
+      document.getElementById('admin-orders-by-status').innerHTML = renderStatusPills(
+        data.ordersByStatus || {},
+        { pending: 'Pending', confirmed: 'Confirmed', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled' }
+      );
+
+      document.getElementById('admin-products-by-status').innerHTML = renderStatusPills(
+        data.productsByStatus || {},
+        { published: 'Published', draft: 'Draft', archived: 'Archived' }
+      );
+
+      const customers = data.customers || {};
+      document.getElementById('admin-customers-row').innerHTML = [
+        renderStatTile(Number(customers.total || 0).toLocaleString(), 'Total Customers'),
+        renderStatTile(Number(customers.newThisWeek || 0).toLocaleString(), 'New This Week')
+      ].join('');
+
+      document.getElementById('admin-revenue-chart').innerHTML = renderRevenueChart(data.revenueTrend30d || []);
     } catch (err) {
       document.getElementById('admin-stat-grid').innerHTML =
         `<div class="admin-table-empty">Could not load stats: ${escapeHtml(err.message)}</div>`;

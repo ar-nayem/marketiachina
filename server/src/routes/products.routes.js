@@ -4,8 +4,9 @@ const { db } = require('../db');
 const router = express.Router();
 
 // Builds the exact nested Product shape documented in the API contract from a
-// products row plus its related product_specs / product_wholesale_tiers rows.
-function buildProduct(row, specRows, tierRows) {
+// products row plus its related product_specs / product_wholesale_tiers /
+// product_media rows.
+function buildProduct(row, specRows, tierRows, mediaRows) {
   const specs = { bn: [], en: [], zh: [] };
   for (const s of specRows) {
     if (specs[s.lang]) specs[s.lang].push({ label: s.label, value: s.value });
@@ -20,10 +21,14 @@ function buildProduct(row, specRows, tierRows) {
     discount: t.discount_label
   }));
 
+  const media = mediaRows.map((m) => ({ url: m.url, type: m.media_type }));
+
   return {
     id: row.id,
     category: row.category,
-    image: row.image,
+    // The primary display image must actually be an image - a video sorted
+    // to slot 0 would otherwise become a broken <img> on the storefront.
+    image: media.find((m) => m.type === 'image')?.url ?? row.image ?? null,
     model3dType: row.model_3d_type,
     isFeatured: !!row.is_featured,
     isFactoryDirect: !!row.is_factory_direct,
@@ -41,7 +46,8 @@ function buildProduct(row, specRows, tierRows) {
     name: { bn: row.name_bn, en: row.name_en, zh: row.name_zh },
     tagline: { bn: row.tagline_bn, en: row.tagline_en, zh: row.tagline_zh },
     description: { bn: row.description_bn, en: row.description_en, zh: row.description_zh },
-    specs
+    specs,
+    media
   };
 }
 
@@ -59,8 +65,14 @@ function getTierRows(productId) {
     .all(productId);
 }
 
+function getMediaRows(productId) {
+  return db
+    .prepare(`SELECT url, media_type, sort_order FROM product_media WHERE product_id = ? ORDER BY sort_order ASC`)
+    .all(productId);
+}
+
 function loadFullProduct(row) {
-  return buildProduct(row, getSpecRows(row.id), getTierRows(row.id));
+  return buildProduct(row, getSpecRows(row.id), getTierRows(row.id), getMediaRows(row.id));
 }
 
 router.get('/', (req, res) => {

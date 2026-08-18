@@ -20,6 +20,9 @@ app.use('/api/auth', require('./src/routes/auth.routes'));
 app.use('/api/admin/auth', require('./src/routes/admin-auth.routes'));
 app.use('/api/products', require('./src/routes/products.routes'));
 app.use('/api/admin/products', require('./src/routes/admin-products.routes'));
+app.use('/api/categories', require('./src/routes/categories.routes'));
+app.use('/api/admin/categories', require('./src/routes/admin-categories.routes'));
+app.use('/api/admin/media', require('./src/routes/admin-media.routes'));
 app.use('/api/services', require('./src/routes/services.routes'));
 app.use('/api/admin/services', require('./src/routes/admin-services.routes'));
 app.use('/api/settings', require('./src/routes/settings.routes'));
@@ -44,6 +47,9 @@ app.get('/services/:slug', (req, res) => res.sendFile(path.join(SITE_ROOT, 'serv
 
 // --- Static roots ---
 app.use('/admin', express.static(ADMIN_ROOT));
+app.use('/uploads', express.static(path.join(__dirname, 'data', 'uploads'), {
+  setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
+}));
 app.use(express.static(SITE_ROOT));
 
 app.listen(PORT, () => {

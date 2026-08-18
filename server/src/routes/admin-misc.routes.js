@@ -72,7 +72,105 @@ router.get('/stats', requirePermission('orders.view'), (req, res) => {
 
   const productCount = db.prepare(`SELECT COUNT(*) AS n FROM products WHERE is_active = 1`).get().n;
 
-  res.json({ ordersCount, revenueBdt30d, newLeads7d, newMessages7d, productCount });
+  // --- Phase 2: richer dashboard stats ---
+
+  const revenueToday =
+    db
+      .prepare(
+        `SELECT COALESCE(SUM(total_bdt), 0) AS total FROM orders
+         WHERE created_at >= date('now') AND status != 'cancelled'`
+      )
+      .get().total || 0;
+
+  const revenueYesterday =
+    db
+      .prepare(
+        `SELECT COALESCE(SUM(total_bdt), 0) AS total FROM orders
+         WHERE created_at >= date('now', '-1 day') AND created_at < date('now') AND status != 'cancelled'`
+      )
+      .get().total || 0;
+
+  const revenueThisWeek =
+    db
+      .prepare(
+        `SELECT COALESCE(SUM(total_bdt), 0) AS total FROM orders
+         WHERE created_at >= date('now', 'weekday 0', '-6 days') AND status != 'cancelled'`
+      )
+      .get().total || 0;
+
+  const revenueThisMonth =
+    db
+      .prepare(
+        `SELECT COALESCE(SUM(total_bdt), 0) AS total FROM orders
+         WHERE created_at >= date('now', 'start of month') AND status != 'cancelled'`
+      )
+      .get().total || 0;
+
+  const revenueThisYear =
+    db
+      .prepare(
+        `SELECT COALESCE(SUM(total_bdt), 0) AS total FROM orders
+         WHERE created_at >= date('now', 'start of year') AND status != 'cancelled'`
+      )
+      .get().total || 0;
+
+  const revenue = {
+    today: revenueToday,
+    yesterday: revenueYesterday,
+    thisWeek: revenueThisWeek,
+    thisMonth: revenueThisMonth,
+    thisYear: revenueThisYear,
+  };
+
+  const ordersByStatus = { pending: 0, confirmed: 0, shipped: 0, delivered: 0, cancelled: 0 };
+  for (const row of db.prepare(`SELECT status, COUNT(*) c FROM orders GROUP BY status`).all()) {
+    if (Object.prototype.hasOwnProperty.call(ordersByStatus, row.status)) {
+      ordersByStatus[row.status] = row.c;
+    }
+  }
+
+  const productsByStatus = { published: 0, draft: 0, archived: 0 };
+  for (const row of db.prepare(`SELECT status, COUNT(*) c FROM products GROUP BY status`).all()) {
+    if (Object.prototype.hasOwnProperty.call(productsByStatus, row.status)) {
+      productsByStatus[row.status] = row.c;
+    }
+  }
+
+  const customers = {
+    total: db.prepare(`SELECT COUNT(*) c FROM customers`).get().c,
+    newThisWeek: db.prepare(`SELECT COUNT(*) c FROM customers WHERE created_at >= date('now', '-7 days')`).get().c,
+  };
+
+  const trendRows = db
+    .prepare(
+      `SELECT date(created_at) AS d, SUM(total_bdt) AS total FROM orders
+       WHERE created_at >= date('now', '-29 days') AND status != 'cancelled'
+       GROUP BY date(created_at)`
+    )
+    .all();
+  const trendByDate = new Map(trendRows.map((row) => [row.d, row.total || 0]));
+  // SQLite's date('now') is UTC-based, so build the matching 30-day range in JS
+  // using UTC fields (no extra DB round-trips needed for the date scaffolding).
+  const todayUtc = new Date();
+  const revenueTrend30d = [];
+  for (let i = 29; i >= 0; i -= 1) {
+    const day = new Date(Date.UTC(todayUtc.getUTCFullYear(), todayUtc.getUTCMonth(), todayUtc.getUTCDate() - i));
+    const d = day.toISOString().slice(0, 10);
+    revenueTrend30d.push({ date: d, revenue: trendByDate.get(d) || 0 });
+  }
+
+  res.json({
+    ordersCount,
+    revenueBdt30d,
+    newLeads7d,
+    newMessages7d,
+    productCount,
+    revenue,
+    ordersByStatus,
+    productsByStatus,
+    customers,
+    revenueTrend30d,
+  });
 });
 
 module.exports = router;
