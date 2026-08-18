@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inventory | Marketia China Admin</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/tailwind.build.css" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/glass.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+  <link rel="stylesheet" href="/admin/css/admin.css" />
+
+  <style>
+    /* Page-specific hand-authored CSS (no reliance on unproven Tailwind utility classes) */
+    .admin-inline-banner {
+      display: none;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .admin-inline-banner.show { display: block; }
+    .admin-inline-banner.error { background: var(--mc-china-red-light); color: var(--mc-china-red); }
+    .admin-inline-banner.success { background: rgba(16, 163, 74, 0.12); color: #10A34A; }
+    .admin-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      padding: 12px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      z-index: 200;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+    .admin-toast.show { opacity: 1; transform: translateY(0); }
+    .admin-toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+    .admin-toolbar .form-input {
+      margin: 0;
+    }
+    .admin-toolbar-search {
+      flex: 1;
+      min-width: 200px;
+    }
+    .admin-toolbar-filter {
+      width: 200px;
+      flex: 0 0 auto;
+    }
+    .admin-form-row {
+      display: flex;
+      gap: 12px;
+    }
+    .admin-form-row > div {
+      flex: 1;
+      min-width: 0;
+    }
+    textarea.form-input {
+      min-height: 70px;
+      resize: vertical;
+    }
+    .admin-field-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .stock-threshold-edit {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stock-threshold-display {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .stock-threshold-display .pencil {
+      font-size: 11px;
+      opacity: 0.5;
+    }
+    .stock-threshold-display:hover .pencil {
+      opacity: 1;
+    }
+    .stock-threshold-input {
+      width: 60px;
+      padding: 2px 6px;
+      font-size: 12px;
+      border: 1px solid var(--mc-china-red);
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .history-row {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+    .history-row .top-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .history-row .delta-positive { color: #10A34A; font-weight: 800; }
+    .history-row .delta-negative { color: var(--mc-china-red); font-weight: 800; }
+    .history-row .meta {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+    .history-row .note {
+      margin-top: 4px;
+      color: var(--text-secondary);
+    }
+    @media (max-width: 640px) {
+      .admin-form-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-shell" id="admin-shell">
+    <div class="admin-main">
+      <div class="admin-topbar">
+        <h1>Inventory</h1>
+      </div>
+      <div class="admin-content">
+        <div class="admin-panel">
+          <div id="admin-banner" class="admin-inline-banner"></div>
+          <div class="admin-panel-header">
+            <h2>Stock Levels</h2>
+          </div>
+          <div class="admin-toolbar">
+            <input class="form-input admin-toolbar-search" id="inventory-search" type="text" placeholder="Search products by name..." />
+            <select class="form-input admin-toolbar-filter" id="stock-status-filter">
+              <option value="">All</option>
+              <option value="low_stock">Low Stock</option>
+              <option value="out_of_stock">Out of Stock</option>
+            </select>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Category</th>
+                  <th>BD Stock</th>
+                  <th>CN Stock</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Low Stock Threshold</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="inventory-tbody">
+                <tr><td colspan="8"><div class="admin-table-empty">Loading inventory…</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide-over backdrop (reuses storefront .modal-overlay), shared by both slide-overs -->
+  <div class="modal-overlay" id="slideover-overlay"></div>
+
+  <!-- Adjust Stock slide-over -->
+  <div class="admin-slideover" id="adjust-slideover">
+    <div class="admin-slideover-header">
+      <h2 id="adjust-title">Adjust Stock</h2>
+      <button class="admin-icon-btn" id="adjust-close" type="button" title="Close">✕</button>
+    </div>
+    <div class="admin-slideover-body">
+      <form id="adjust-form">
+        <div>
+          <label class="form-label">Location</label>
+          <select class="form-input" id="adj-location">
+            <option value="bd">Bangladesh</option>
+            <option value="cn">China</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Change Type</label>
+          <!-- Label -> contract changeType mapping:
+               Add Stock        -> add
+               Remove Stock     -> remove
+               Set Exact Amount -> adjust
+               Transfer In      -> transfer_in
+               Transfer Out     -> transfer_out
+               Damaged          -> damaged
+               Returned         -> returned -->
+          <select class="form-input" id="adj-changeType">
+            <option value="add">Add Stock</option>
+            <option value="remove">Remove Stock</option>
+            <option value="adjust">Set Exact Amount</option>
+            <option value="transfer_in">Transfer In</option>
+            <option value="transfer_out">Transfer Out</option>
+            <option value="damaged">Damaged</option>
+            <option value="returned">Returned</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label" id="adj-quantity-label">Quantity</label>
+          <input class="form-input" id="adj-quantity" type="number" step="1" min="0" />
+        </div>
+        <div>
+          <label class="form-label">Note (optional)</label>
+          <textarea class="form-input" id="adj-note" placeholder="Optional note about this adjustment"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="admin-slideover-footer">
+      <button class="btn-secondary" id="adjust-cancel" type="button">Cancel</button>
+      <button class="btn-primary" id="adjust-save" type="submit" form="adjust-form">Save Adjustment</button>
+    </div>
+  </div>
+
+  <!-- History slide-over -->
+  <div class="admin-slideover" id="history-slideover">
+    <div class="admin-slideover-header">
+      <h2 id="history-title">Stock History</h2>
+      <button class="admin-icon-btn" id="history-close" type="button" title="Close">✕</button>
+    </div>
+    <div class="admin-slideover-body">
+      <div class="history-list" id="history-list">
+        <div class="admin-table-empty">Loading…</div>
+      </div>
+    </div>
+    <div class="admin-slideover-footer">
+      <button class="btn-secondary" id="history-close-btn" type="button">Close</button>
+    </div>
+  </div>
+
+  <div class="admin-toast" id="admin-toast"></div>
+
+  <script type="module">
+    import { apiFetch, requireAdminAuth, renderSidebar, wireLogout, escapeHtml, formatDate } from './js/adminShell.js';
+
+    let products = [];
+    let adjustingProductId = null;
+    let historyProductId = null;
+
+    const CHANGE_TYPE_LABELS = {
+      add: 'Add Stock',
+      remove: 'Remove Stock',
+      adjust: 'Set Exact Amount',
+      transfer_in: 'Transfer In',
+      transfer_out: 'Transfer Out',
+      damaged: 'Damaged',
+      returned: 'Returned',
+    };
+
+    const LOCATION_LABELS = { bd: 'Bangladesh', cn: 'China' };
+
+    const STOCK_STATUS_BADGE = {
+      in_stock: { label: 'In Stock', cls: 'admin-badge-green' },
+      low_stock: { label: 'Low Stock', cls: 'admin-badge-gold' },
+      out_of_stock: { label: 'Out of Stock', cls: 'admin-badge-red' },
+      pre_order: { label: 'Pre-order', cls: 'admin-badge-neutral' },
+      discontinued: { label: 'Discontinued', cls: 'admin-badge-neutral' },
+    };
+
+    function getFilteredProducts() {
+      const q = document.getElementById('inventory-search').value.trim().toLowerCase();
+      const statusFilter = document.getElementById('stock-status-filter').value;
+      return products.filter(p => {
+        const matchesSearch = !q || (p.name || '').toLowerCase().includes(q);
+        const matchesStatus = !statusFilter || p.stockStatus === statusFilter;
+        return matchesSearch && matchesStatus;
+      });
+    }
+
+    function renderThresholdCell(p) {
+      return `
+        <span class="stock-threshold-display" data-id="${escapeHtml(p.id)}" title="Click to edit">
+          ${escapeHtml(p.lowStockThreshold)}
+          <span class="pencil">✏️</span>
+        </span>
+      `;
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('inventory-tbody');
+      const list = getFilteredProducts();
+      if (!products.length) {
+        tbody.innerHTML = '<tr><td colspan="8"><div class="admin-table-empty">No products found.</div></td></tr>';
+        return;
+      }
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="8"><div class="admin-table-empty">No products match your search/filter.</div></td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(p => {
+        const total = (p.bdStock || 0) + (p.cnStock || 0);
+        const badgeInfo = STOCK_STATUS_BADGE[p.stockStatus] || { label: p.stockStatus, cls: 'admin-badge-neutral' };
+        const badge = `<span class="admin-badge ${badgeInfo.cls}">${escapeHtml(badgeInfo.label)}</span>`;
+        return `
+          <tr>
+            <td>${escapeHtml(p.name)}</td>
+            <td>${escapeHtml(p.category || '')}</td>
+            <td>${escapeHtml(p.bdStock)}</td>
+            <td>${escapeHtml(p.cnStock)}</td>
+            <td>${escapeHtml(total)}</td>
+            <td>${badge}</td>
+            <td data-threshold-cell="${escapeHtml(p.id)}">${renderThresholdCell(p)}</td>
+            <td>
+              <div class="admin-row-actions">
+                <button class="btn-secondary adjust-btn" data-id="${escapeHtml(p.id)}" type="button" style="padding:5px 10px;font-size:12px;">Adjust Stock</button>
+                <button class="btn-secondary history-btn" data-id="${escapeHtml(p.id)}" type="button" style="padding:5px 10px;font-size:12px;">History</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      tbody.querySelectorAll('.adjust-btn').forEach(btn => btn.addEventListener('click', () => openAdjust(btn.dataset.id)));
+      tbody.querySelectorAll('.history-btn').forEach(btn => btn.addEventListener('click', () => openHistory(btn.dataset.id)));
+      tbody.querySelectorAll('.stock-threshold-display').forEach(el => el.addEventListener('click', () => beginThresholdEdit(el.dataset.id)));
+    }
+
+    function beginThresholdEdit(id) {
+      const p = products.find(x => String(x.id) === String(id));
+      if (!p) return;
+      const cell = document.querySelector(`[data-threshold-cell="${CSS.escape(id)}"]`);
+      if (!cell) return;
+      cell.innerHTML = `<input type="number" step="1" min="0" class="stock-threshold-input" id="threshold-input-${escapeHtml(id)}" value="${escapeHtml(p.lowStockThreshold)}" />`;
+      const input = document.getElementById(`threshold-input-${id}`);
+      input.focus();
+      input.select();
+      const commit = async () => {
+        const val = parseInt(input.value, 10);
+        if (!Number.isFinite(val) || val < 0) {
+          renderTable();
+          return;
+        }
+        if (val === p.lowStockThreshold) {
+          renderTable();
+          return;
+        }
+        try {
+          const data = await apiFetch(`/api/admin/inventory/${encodeURIComponent(id)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ lowStockThreshold: val })
+          });
+          applyUpdatedProduct(data.product);
+          showToast('Low stock threshold updated');
+        } catch (err) {
+          showBanner(err.message, 'error');
+          renderTable();
+        }
+      };
+      input.addEventListener('blur', commit);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') { e.preventDefault(); renderTable(); }
+      });
+    }
+
+    async function loadProducts() {
+      try {
+        const data = await apiFetch('/api/admin/inventory');
+        products = data.products || [];
+        renderTable();
+      } catch (err) {
+        showBanner(err.message, 'error');
+      }
+    }
+
+    function applyUpdatedProduct(updated) {
+      const idx = products.findIndex(p => String(p.id) === String(updated.id));
+      if (idx >= 0) {
+        products[idx] = updated;
+      } else {
+        products.push(updated);
+      }
+      renderTable();
+    }
+
+    const overlay = document.getElementById('slideover-overlay');
+    const adjustSlideover = document.getElementById('adjust-slideover');
+    const historySlideover = document.getElementById('history-slideover');
+
+    function openOverlayFor(slideover) {
+      overlay.classList.add('open');
+      slideover.classList.add('open');
+    }
+    function closeAllSlideovers() {
+      overlay.classList.remove('open');
+      adjustSlideover.classList.remove('open');
+      historySlideover.classList.remove('open');
+      adjustingProductId = null;
+      historyProductId = null;
+    }
+    overlay.addEventListener('click', closeAllSlideovers);
+    document.getElementById('adjust-close').addEventListener('click', closeAllSlideovers);
+    document.getElementById('adjust-cancel').addEventListener('click', closeAllSlideovers);
+    document.getElementById('history-close').addEventListener('click', closeAllSlideovers);
+    document.getElementById('history-close-btn').addEventListener('click', closeAllSlideovers);
+
+    function updateQuantityLabel() {
+      const changeType = document.getElementById('adj-changeType').value;
+      const label = document.getElementById('adj-quantity-label');
+      label.textContent = changeType === 'adjust' ? 'New total for this location' : 'Quantity';
+    }
+    document.getElementById('adj-changeType').addEventListener('change', updateQuantityLabel);
+
+    function openAdjust(id) {
+      const p = products.find(x => String(x.id) === String(id));
+      if (!p) return;
+      adjustingProductId = id;
+      document.getElementById('adjust-title').textContent = `Adjust Stock — ${p.name}`;
+      document.getElementById('adj-location').value = 'bd';
+      document.getElementById('adj-changeType').value = 'add';
+      document.getElementById('adj-quantity').value = '';
+      document.getElementById('adj-note').value = '';
+      updateQuantityLabel();
+      openOverlayFor(adjustSlideover);
+    }
+
+    document.getElementById('adjust-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!adjustingProductId) return;
+      const location = document.getElementById('adj-location').value;
+      const changeType = document.getElementById('adj-changeType').value;
+      const quantityRaw = document.getElementById('adj-quantity').value;
+      const note = document.getElementById('adj-note').value.trim();
+      const quantity = parseInt(quantityRaw, 10);
+      const minQuantity = changeType === 'adjust' ? 0 : 1;
+      if (!Number.isInteger(quantity) || quantity < minQuantity) {
+        showBanner(
+          changeType === 'adjust' ? 'Quantity must be zero or a positive whole number.' : 'Quantity must be a positive whole number.',
+          'error'
+        );
+        return;
+      }
+      const saveBtn = document.getElementById('adjust-save');
+      saveBtn.disabled = true;
+      try {
+        const data = await apiFetch(`/api/admin/inventory/${encodeURIComponent(adjustingProductId)}/adjust`, {
+          method: 'POST',
+          body: JSON.stringify({ location, changeType, quantity, note: note || undefined })
+        });
+        applyUpdatedProduct(data.product);
+        closeAllSlideovers();
+        showToast('Stock adjusted');
+      } catch (err) {
+        showBanner(err.message, 'error');
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    async function openHistory(id) {
+      const p = products.find(x => String(x.id) === String(id));
+      if (!p) return;
+      historyProductId = id;
+      document.getElementById('history-title').textContent = `Stock History — ${p.name}`;
+      const list = document.getElementById('history-list');
+      list.innerHTML = '<div class="admin-table-empty">Loading…</div>';
+      openOverlayFor(historySlideover);
+      try {
+        const data = await apiFetch(`/api/admin/inventory/${encodeURIComponent(id)}/history`);
+        renderHistoryList(data.transactions || []);
+      } catch (err) {
+        list.innerHTML = `<div class="admin-table-empty">${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderHistoryList(transactions) {
+      const list = document.getElementById('history-list');
+      if (!transactions.length) {
+        list.innerHTML = '<div class="admin-table-empty">No stock transactions yet.</div>';
+        return;
+      }
+      list.innerHTML = transactions.map(t => {
+        const sign = t.quantityDelta > 0 ? '+' : (t.quantityDelta < 0 ? '' : '±');
+        const deltaCls = t.quantityDelta > 0 ? 'delta-positive' : (t.quantityDelta < 0 ? 'delta-negative' : '');
+        const typeLabel = CHANGE_TYPE_LABELS[t.changeType] || t.changeType;
+        const locLabel = LOCATION_LABELS[t.location] || t.location;
+        return `
+          <div class="history-row">
+            <div class="top-line">
+              <strong>${escapeHtml(typeLabel)}</strong>
+              <span class="${deltaCls}">${sign}${escapeHtml(t.quantityDelta)} → ${escapeHtml(t.quantityAfter)}</span>
+            </div>
+            <div class="meta">${escapeHtml(locLabel)} · ${escapeHtml(formatDate(t.createdAt))} · ${escapeHtml(t.adminName || 'Unknown')}</div>
+            ${t.note ? `<div class="note">${escapeHtml(t.note)}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('admin-toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    let bannerTimer = null;
+    function showBanner(msg, type) {
+      const el = document.getElementById('admin-banner');
+      el.textContent = msg;
+      el.className = `admin-inline-banner show ${type || 'error'}`;
+      clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(() => el.classList.remove('show'), 5000);
+    }
+
+    (async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+      document.getElementById('admin-shell').insertAdjacentHTML('afterbegin', renderSidebar('inventory', admin));
+      wireLogout();
+      document.getElementById('inventory-search').addEventListener('input', renderTable);
+      document.getElementById('stock-status-filter').addEventListener('change', renderTable);
+      await loadProducts();
+    })();
+  </script>
+</body>
+</html>

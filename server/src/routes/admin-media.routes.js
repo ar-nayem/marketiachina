@@ -7,14 +7,18 @@ const { upload, mediaTypeFor, UPLOAD_DIR } = require('../lib/upload');
 
 const router = express.Router();
 
-// Media is shared infrastructure for both products and categories - any of
-// these permissions is enough to upload/browse/delete, since all three areas
-// legitimately need it. A pure moderator (orders/messages/reviews only) holds
-// none of these and is correctly blocked.
-const MEDIA_PERMISSIONS = ['products.create', 'products.edit', 'categories.manage'];
+// Uploading is shared infrastructure for products, categories, AND return
+// evidence photos - any of these permissions is enough to upload.
+const MEDIA_UPLOAD_PERMISSIONS = ['products.create', 'products.edit', 'categories.manage', 'returns.manage'];
+
+// Browsing/deleting the shared product media LIBRARY is a stronger action
+// than uploading one evidence photo - deliberately excludes returns.manage,
+// so a returns-only account can attach evidence but cannot browse or delete
+// other products' photos/videos library-wide.
+const MEDIA_LIBRARY_PERMISSIONS = ['products.create', 'products.edit', 'categories.manage'];
 
 // POST /api/admin/media/upload
-router.post('/upload', requireAnyPermission(MEDIA_PERMISSIONS), upload.array('files', 10), (req, res) => {
+router.post('/upload', requireAnyPermission(MEDIA_UPLOAD_PERMISSIONS), upload.array('files', 10), (req, res) => {
   const files = req.files || [];
   if (!files.length) {
     return res.status(400).json({ error: 'No files uploaded.' });
@@ -30,7 +34,7 @@ router.post('/upload', requireAnyPermission(MEDIA_PERMISSIONS), upload.array('fi
 
 // GET /api/admin/media - list everything uploaded and attached to a product,
 // for the Media Library browse page.
-router.get('/', requireAnyPermission(MEDIA_PERMISSIONS), (req, res) => {
+router.get('/', requireAnyPermission(MEDIA_LIBRARY_PERMISSIONS), (req, res) => {
   const rows = db
     .prepare(
       `SELECT product_media.id, product_media.url, product_media.media_type, product_media.created_at,
@@ -54,7 +58,7 @@ router.get('/', requireAnyPermission(MEDIA_PERMISSIONS), (req, res) => {
 });
 
 // DELETE /api/admin/media/:id - delete one product_media row + best-effort disk cleanup.
-router.delete('/:id', requireAnyPermission(MEDIA_PERMISSIONS), (req, res) => {
+router.delete('/:id', requireAnyPermission(MEDIA_LIBRARY_PERMISSIONS), (req, res) => {
   const row = db.prepare('SELECT id, url FROM product_media WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Media not found.' });
 

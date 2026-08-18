@@ -17,26 +17,6 @@ router.get('/leads', requirePermission('customers.view'), (req, res) => {
   res.json({ leads });
 });
 
-router.get('/customers', requirePermission('customers.view'), (req, res) => {
-  const rows = db
-    .prepare(
-      `SELECT c.id, c.name, c.email, c.phone, c.created_at,
-              (SELECT COUNT(*) FROM orders o WHERE o.customer_id = c.id) AS order_count
-       FROM customers c
-       ORDER BY c.created_at DESC, c.id DESC`
-    )
-    .all();
-  const customers = rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    phone: row.phone,
-    createdAt: row.created_at,
-    orderCount: row.order_count,
-  }));
-  res.json({ customers });
-});
-
 router.get('/outbox', requirePermission('settings.manage'), (req, res) => {
   const rows = db
     .prepare(`SELECT * FROM mail_outbox ORDER BY created_at DESC, id DESC LIMIT 200`)

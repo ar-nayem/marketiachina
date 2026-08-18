@@ -70,19 +70,53 @@ router.get('/:id', requirePermission('orders.view'), (req, res) => {
   if (!order) return res.status(404).json({ error: 'Order not found.' });
 
   const items = db.prepare(`SELECT * FROM order_items WHERE order_id = ? ORDER BY id ASC`).all(order.id);
-  res.json({ order: { ...toCamelOrder(order), items: items.map(toCamelItem) } });
+
+  const historyRows = db
+    .prepare(
+      `SELECT id, status, note, changed_by_admin_name, created_at
+       FROM order_status_history
+       WHERE order_id = ?
+       ORDER BY created_at DESC, id DESC`
+    )
+    .all(order.id);
+  const history = historyRows.map((h) => ({
+    status: h.status,
+    note: h.note,
+    adminName: h.changed_by_admin_name,
+    createdAt: h.created_at,
+  }));
+
+  res.json({ order: { ...toCamelOrder(order), items: items.map(toCamelItem), history } });
 });
 
 router.patch('/:id', requirePermission('orders.update_status'), (req, res) => {
-  const { status } = req.body || {};
+  const { status, note } = req.body || {};
   if (!VALID_STATUSES.includes(status)) {
     return res.status(400).json({ error: `Status must be one of: ${VALID_STATUSES.join(', ')}.` });
+  }
+  if (note !== undefined && note !== null && typeof note !== 'string') {
+    return res.status(400).json({ error: 'note must be a string.' });
   }
 
   const order = db.prepare(`SELECT id, status FROM orders WHERE id = ?`).get(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found.' });
 
-  db.prepare(`UPDATE orders SET status = ? WHERE id = ?`).run(status, req.params.id);
+  // Atomic: the status change and its timeline entry must both land together,
+  // or neither does - a crash between the two must never leave the order's
+  // live status disagreeing with its own history.
+  db.exec('BEGIN');
+  try {
+    db.prepare(`UPDATE orders SET status = ? WHERE id = ?`).run(status, req.params.id);
+
+    db.prepare(
+      `INSERT INTO order_status_history (order_id, status, note, changed_by_admin_id, changed_by_admin_name)
+       VALUES (?, ?, ?, ?, ?)`
+    ).run(req.params.id, status, note ?? null, req.admin.id, req.admin.name);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
 
   logActivity({
     adminId: req.admin.id,

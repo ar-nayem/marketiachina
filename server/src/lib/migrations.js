@@ -102,6 +102,39 @@ function runMigrations(db) {
     clearLegacyImage.run(row.id);
   }
 
+  // j. Add new columns to products idempotently (Phase 3: inventory tracking).
+  const inventoryColumns = new Set(db.prepare('PRAGMA table_info(products)').all().map((col) => col.name));
+  const inventoryColumnsToAdd = [
+    ['bd_stock', 'INTEGER NOT NULL DEFAULT 0'],
+    ['cn_stock', 'INTEGER NOT NULL DEFAULT 0'],
+    ['low_stock_threshold', 'INTEGER NOT NULL DEFAULT 10'],
+    // No CHECK constraint here (SQLite ALTER TABLE ADD COLUMN compatibility risk) -
+    // the allowed values ['normal','pre_order','discontinued'] are validated in
+    // application code only, same pattern as products.status.
+    ['inventory_status', "TEXT NOT NULL DEFAULT 'normal'"],
+  ];
+  for (const [columnName, columnDef] of inventoryColumnsToAdd) {
+    if (!inventoryColumns.has(columnName)) {
+      db.exec(`ALTER TABLE products ADD COLUMN ${columnName} ${columnDef}`);
+    }
+  }
+
+  // k. One-time backfill: give every existing order a starting timeline entry
+  // (guarded so this never duplicates on repeat boots).
+  const ordersMissingHistory = db
+    .prepare(
+      `SELECT id, status, created_at FROM orders
+       WHERE NOT EXISTS (SELECT 1 FROM order_status_history WHERE order_status_history.order_id = orders.id)`
+    )
+    .all();
+  const insertOrderStatusHistory = db.prepare(
+    `INSERT INTO order_status_history (order_id, status, note, changed_by_admin_id, changed_by_admin_name, created_at)
+     VALUES (?, ?, 'Historical status - recorded before order timeline tracking existed.', NULL, 'System', ?)`
+  );
+  for (const order of ordersMissingHistory) {
+    insertOrderStatusHistory.run(order.id, order.status, order.created_at);
+  }
+
   console.log('[migrations] schema ready (RBAC + catalog)');
 }
 

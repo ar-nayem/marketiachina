@@ -235,3 +235,51 @@ CREATE TABLE IF NOT EXISTS product_media (
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Phase 3: inventory tracking, order status timeline, returns & refunds, customer notes.
+
+CREATE TABLE IF NOT EXISTS inventory_transactions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id TEXT NOT NULL REFERENCES products(id),
+  location TEXT NOT NULL CHECK (location IN ('bd','cn')),
+  change_type TEXT NOT NULL CHECK (change_type IN ('add','remove','adjust','transfer_in','transfer_out','damaged','returned')),
+  quantity_delta INTEGER NOT NULL,
+  quantity_after INTEGER NOT NULL,
+  note TEXT,
+  admin_id INTEGER REFERENCES admin_users(id),
+  admin_name TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS order_status_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  status TEXT NOT NULL,
+  note TEXT,
+  changed_by_admin_id INTEGER REFERENCES admin_users(id),
+  changed_by_admin_name TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS returns (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL REFERENCES orders(id),
+  product_id TEXT REFERENCES products(id),
+  reason TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'requested' CHECK (status IN ('requested','approved','rejected','return_in_transit','received','refunded','completed')),
+  refund_amount_bdt REAL,
+  evidence_media TEXT,
+  staff_admin_id INTEGER REFERENCES admin_users(id),
+  staff_admin_name TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS customer_notes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  note TEXT NOT NULL,
+  admin_id INTEGER REFERENCES admin_users(id),
+  admin_name TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

@@ -6,6 +6,8 @@ const PERMISSIONS = [
   { key: 'products.edit', label: 'Edit products', category: 'Products' },
   { key: 'products.delete', label: 'Delete/archive products', category: 'Products' },
   { key: 'categories.manage', label: 'Manage categories', category: 'Products' },
+  { key: 'inventory.manage', label: 'Manage inventory', category: 'Products' },
+  { key: 'returns.manage', label: 'Manage returns & refunds', category: 'Orders' },
   { key: 'customers.view', label: 'View customers', category: 'Customers' },
   { key: 'customers.message', label: 'Message customers', category: 'Customers' },
   { key: 'messages.view', label: 'View messages', category: 'Messages' },

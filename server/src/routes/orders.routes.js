@@ -166,6 +166,17 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
     }
   }
 
+  try {
+    db.prepare(
+      `INSERT INTO order_status_history (order_id, status, note, changed_by_admin_id, changed_by_admin_name)
+       VALUES (?, ?, 'Order placed by customer.', NULL, 'System')`
+    ).run(order.id, order.status);
+  } catch (err) {
+    // Never let a timeline-history hiccup break checkout - the order itself
+    // already exists and that's what matters. The admin Status Timeline just
+    // starts empty for this order if this insert ever fails.
+  }
+
   const insertItemStmt = db.prepare(`
     INSERT INTO order_items (order_id, product_id, product_name_snapshot, unit_price_bdt, quantity, line_total_bdt)
     VALUES (?, ?, ?, ?, ?, ?)

@@ -16,9 +16,127 @@
 
   <!-- Admin control panel layout -->
   <link rel="stylesheet" href="css/admin.css" />
+
+  <style>
+    /* Page-specific hand-authored CSS (reuses admin.css tokens, adds nothing new) */
+    .segment-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .segment-pill {
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      border-radius: var(--radius-full);
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+    .segment-pill:hover {
+      border-color: var(--mc-china-red);
+      color: var(--mc-china-red);
+    }
+    .segment-pill.active {
+      background: var(--mc-china-red);
+      border-color: var(--mc-china-red);
+      color: #fff;
+    }
+    .segment-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .c360-stat-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 12px;
+    }
+    .c360-stat {
+      background: var(--bg-tertiary);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+    .c360-stat .value {
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--mc-china-red);
+      line-height: 1.2;
+    }
+    .c360-stat .label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .c360-section-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--mc-china-red);
+      padding-top: 14px;
+      margin-top: 4px;
+      border-top: 1px solid var(--border-color);
+    }
+    .c360-section-title.first {
+      border-top: none;
+      padding-top: 0;
+      margin-top: 0;
+    }
+    .c360-order-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 0;
+      border-top: 1px solid var(--border-color);
+      font-size: 13px;
+    }
+    .c360-order-row:first-of-type { border-top: none; }
+    .c360-note {
+      background: var(--bg-tertiary);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      margin-bottom: 8px;
+    }
+    .c360-note .note-text {
+      font-size: 13px;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .c360-note .note-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    .admin-inline-banner {
+      display: none;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .admin-inline-banner.show { display: block; }
+    .admin-inline-banner.error { background: var(--mc-china-red-light); color: var(--mc-china-red); }
+    .admin-inline-banner.success { background: rgba(16, 163, 74, 0.12); color: #10A34A; }
+  </style>
 </head>
 <body>
   <div id="admin-root"></div>
+
+  <div class="modal-overlay" id="c360-overlay">
+    <div class="admin-slideover" id="c360-slideover" style="max-width:560px;">
+      <div class="admin-slideover-header">
+        <h2 id="c360-title">Customer</h2>
+        <button class="admin-icon-btn" id="c360-close" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div class="admin-slideover-body" id="c360-body"></div>
+    </div>
+  </div>
 
   <script type="module">
     import {
@@ -30,44 +148,272 @@
       formatDate
     } from '/admin/js/adminShell.js';
 
+    const SEGMENT_TABS = [
+      { key: '', label: 'All' },
+      { key: 'new', label: 'New' },
+      { key: 'returning', label: 'Returning' },
+      { key: 'frequent', label: 'Frequent' },
+      { key: 'high_value', label: 'High Value' },
+      { key: 'inactive', label: 'Inactive' },
+    ];
+
+    const SEGMENT_BADGE_CLASS = {
+      new: 'admin-badge-gold',
+      returning: 'admin-badge-neutral',
+      frequent: 'admin-badge-green',
+      high_value: 'admin-badge-green',
+      inactive: 'admin-badge-red',
+    };
+
+    const SEGMENT_LABEL = {
+      new: 'New',
+      returning: 'Returning',
+      frequent: 'Frequent',
+      high_value: 'High Value',
+      inactive: 'Inactive',
+    };
+
+    const ORDER_STATUS_BADGE_CLASS = {
+      pending: 'admin-badge-neutral',
+      confirmed: 'admin-badge-gold',
+      shipped: 'admin-badge-gold',
+      delivered: 'admin-badge-green',
+      cancelled: 'admin-badge-red',
+    };
+
+    let admin = null;
+    let currentSegment = '';
+    let activeCustomerId = null;
+
+    function money(value) {
+      const n = Number(value) || 0;
+      return `৳${n.toLocaleString('en-US')}`;
+    }
+
+    function statusLabel(status) {
+      if (!status) return '';
+      return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+
+    function segmentChips(segments) {
+      if (!segments || !segments.length) {
+        return '<span style="color:var(--text-muted);font-size:12px;">—</span>';
+      }
+      return `<div class="segment-chips">${segments
+        .map((s) => `<span class="admin-badge ${SEGMENT_BADGE_CLASS[s] || 'admin-badge-neutral'}">${escapeHtml(SEGMENT_LABEL[s] || s)}</span>`)
+        .join('')}</div>`;
+    }
+
+    function showError(message) {
+      const banner = document.getElementById('error-banner');
+      if (!banner) return;
+      banner.textContent = message;
+      banner.className = 'admin-inline-banner show error';
+      window.clearTimeout(showError._t);
+      showError._t = window.setTimeout(() => {
+        banner.classList.remove('show');
+      }, 6000);
+    }
+
     function renderRows(customers) {
       const tbody = document.getElementById('customers-tbody');
       if (!customers.length) {
-        tbody.innerHTML = `<tr><td colspan="6" class="admin-table-empty">No customers yet.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="admin-table-empty">No customers found.</td></tr>`;
         return;
       }
       tbody.innerHTML = customers
         .map(
           (c) => `
-        <tr>
+        <tr data-customer-row="${c.id}" style="cursor:pointer;">
           <td>${escapeHtml(c.name) || '<span style="color:var(--text-muted)">—</span>'}</td>
           <td>${escapeHtml(c.email) || '<span style="color:var(--text-muted)">—</span>'}</td>
           <td>${escapeHtml(c.phone) || '<span style="color:var(--text-muted)">—</span>'}</td>
           <td>${c.orderCount ?? 0}</td>
+          <td>${money(c.totalSpentBDT)}</td>
+          <td>${money(c.avgOrderValueBDT)}</td>
+          <td>${segmentChips(c.segments)}</td>
           <td>${formatDate(c.createdAt)}</td>
           <td style="text-align:right;">
-            <a href="/admin/orders.html" class="btn-secondary text-xs" style="display:inline-flex;">View Orders</a>
+            <div class="admin-row-actions">
+              <button type="button" class="btn-secondary view-customer-btn" data-id="${c.id}" style="padding:6px 12px;font-size:12px;">View</button>
+            </div>
           </td>
         </tr>
       `
         )
         .join('');
+
+      tbody.querySelectorAll('.view-customer-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openCustomer(btn.getAttribute('data-id'));
+        });
+      });
+      tbody.querySelectorAll('tr[data-customer-row]').forEach((row) => {
+        row.addEventListener('click', () => openCustomer(row.getAttribute('data-customer-row')));
+      });
     }
 
     async function loadCustomers() {
       const tbody = document.getElementById('customers-tbody');
+      tbody.innerHTML = `<tr><td colspan="9" class="admin-table-empty">Loading…</td></tr>`;
       try {
-        const data = await apiFetch('/api/admin/customers');
+        const qs = currentSegment ? `?segment=${encodeURIComponent(currentSegment)}` : '';
+        const data = await apiFetch(`/api/admin/customers${qs}`);
         renderRows(data.customers || []);
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="6" class="admin-table-empty">Failed to load customers: ${escapeHtml(
-          err.message
-        )}</td></tr>`;
+        showError(err.message);
+        tbody.innerHTML = `<tr><td colspan="9" class="admin-table-empty">Failed to load customers.</td></tr>`;
       }
     }
 
+    function renderSegmentTabs() {
+      const wrap = document.getElementById('segment-tabs');
+      wrap.innerHTML = SEGMENT_TABS.map(
+        (t) =>
+          `<button type="button" class="segment-pill ${t.key === currentSegment ? 'active' : ''}" data-segment="${t.key}">${escapeHtml(t.label)}</button>`
+      ).join('');
+      wrap.querySelectorAll('.segment-pill').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          currentSegment = btn.getAttribute('data-segment');
+          renderSegmentTabs();
+          loadCustomers();
+        });
+      });
+    }
+
+    function renderNotes(notes) {
+      const list = document.getElementById('c360-notes-list');
+      if (!notes.length) {
+        list.innerHTML = `<div style="color:var(--text-muted);font-size:13px;">No notes yet.</div>`;
+        return;
+      }
+      list.innerHTML = notes
+        .map(
+          (n) => `
+        <div class="c360-note">
+          <div class="note-text">${escapeHtml(n.note)}</div>
+          <div class="note-meta">${escapeHtml(n.adminName || 'Unknown')} &middot; ${escapeHtml(formatDate(n.createdAt))}</div>
+        </div>
+      `
+        )
+        .join('');
+    }
+
+    function renderCustomerDetail(customer) {
+      document.getElementById('c360-title').textContent = customer.name || 'Customer';
+
+      const orderRows = customer.orders.length
+        ? customer.orders
+            .map(
+              (o) => `
+          <div class="c360-order-row">
+            <span><strong>${escapeHtml(o.orderNumber)}</strong></span>
+            <span><span class="admin-badge ${ORDER_STATUS_BADGE_CLASS[o.status] || 'admin-badge-neutral'}">${escapeHtml(statusLabel(o.status))}</span></span>
+            <span>${money(o.totalBDT)}</span>
+            <span style="color:var(--text-muted);">${escapeHtml(formatDate(o.createdAt))}</span>
+          </div>
+        `
+            )
+            .join('')
+        : `<div style="color:var(--text-muted);font-size:13px;padding:10px 0;">No orders yet.</div>`;
+
+      document.getElementById('c360-body').innerHTML = `
+        <div>
+          <div style="font-weight:800;font-size:16px;">${escapeHtml(customer.name)}</div>
+          <div style="color:var(--text-secondary);font-size:13px;margin-top:2px;">${escapeHtml(customer.email)} &middot; ${escapeHtml(customer.phone) || '—'}</div>
+          <div style="color:var(--text-muted);font-size:12px;margin-top:4px;">Joined ${escapeHtml(formatDate(customer.createdAt))}</div>
+          <div style="margin-top:10px;">${segmentChips(customer.segments)}</div>
+        </div>
+
+        <div class="c360-stat-row">
+          <div class="c360-stat"><div class="value">${customer.orderCount}</div><div class="label">Orders</div></div>
+          <div class="c360-stat"><div class="value">${money(customer.totalSpentBDT)}</div><div class="label">Total Spent</div></div>
+          <div class="c360-stat"><div class="value">${money(customer.avgOrderValueBDT)}</div><div class="label">Avg Order Value</div></div>
+          <div class="c360-stat"><div class="value" style="font-size:14px;">${customer.lastOrderAt ? escapeHtml(formatDate(customer.lastOrderAt)) : '—'}</div><div class="label">Last Order</div></div>
+        </div>
+
+        <div class="c360-section-title first">Orders</div>
+        <div>${orderRows}</div>
+
+        <div class="c360-section-title">Notes</div>
+        <div id="c360-notes-list"></div>
+        <div>
+          <label class="form-label" for="c360-note-input">Add a note</label>
+          <textarea class="form-input" id="c360-note-input" placeholder="Internal note about this customer…" style="min-height:70px;"></textarea>
+          <div class="admin-field-error" id="c360-note-error" style="color:var(--mc-china-red);font-size:12px;margin-top:4px;min-height:14px;"></div>
+          <button type="button" class="btn-primary" id="c360-add-note-btn" style="margin-top:8px;">Add Note</button>
+        </div>
+      `;
+
+      renderNotes(customer.notes);
+
+      document.getElementById('c360-add-note-btn').addEventListener('click', submitNote);
+    }
+
+    async function submitNote() {
+      const textarea = document.getElementById('c360-note-input');
+      const errorEl = document.getElementById('c360-note-error');
+      const note = textarea.value.trim();
+      errorEl.textContent = '';
+      if (!note) {
+        errorEl.textContent = 'Note text is required.';
+        return;
+      }
+
+      const btn = document.getElementById('c360-add-note-btn');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      try {
+        const data = await apiFetch(`/api/admin/customers/${encodeURIComponent(activeCustomerId)}/notes`, {
+          method: 'POST',
+          body: JSON.stringify({ note }),
+        });
+        const list = document.getElementById('c360-notes-list');
+        const emptyOnly = list.children.length === 1 && list.textContent.includes('No notes yet');
+        const noteHtml = `
+          <div class="c360-note">
+            <div class="note-text">${escapeHtml(data.note.note)}</div>
+            <div class="note-meta">${escapeHtml(data.note.adminName || 'Unknown')} &middot; ${escapeHtml(formatDate(data.note.createdAt))}</div>
+          </div>
+        `;
+        if (emptyOnly) {
+          list.innerHTML = noteHtml;
+        } else {
+          list.insertAdjacentHTML('afterbegin', noteHtml);
+        }
+        textarea.value = '';
+      } catch (err) {
+        errorEl.textContent = err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Add Note';
+      }
+    }
+
+    async function openCustomer(id) {
+      activeCustomerId = id;
+      try {
+        const data = await apiFetch(`/api/admin/customers/${encodeURIComponent(id)}`);
+        renderCustomerDetail(data.customer);
+        openSlideover();
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    function openSlideover() {
+      document.getElementById('c360-overlay').classList.add('open');
+      document.getElementById('c360-slideover').classList.add('open');
+    }
+    function closeSlideover() {
+      document.getElementById('c360-overlay').classList.remove('open');
+      document.getElementById('c360-slideover').classList.remove('open');
+      activeCustomerId = null;
+    }
+
     async function init() {
-      const admin = await requireAdminAuth();
+      admin = await requireAdminAuth();
       if (!admin) return;
 
       document.getElementById('admin-root').innerHTML = `
@@ -78,9 +424,13 @@
               <h1>Customers</h1>
             </div>
             <div class="admin-content">
+              <div id="error-banner" class="admin-inline-banner"></div>
               <div class="admin-panel">
-                <div class="admin-panel-header">
-                  <h2>All Customers</h2>
+                <div class="admin-panel-header" style="flex-direction:column;align-items:stretch;gap:12px;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <h2>All Customers</h2>
+                  </div>
+                  <div class="segment-pills" id="segment-tabs"></div>
                 </div>
                 <div class="admin-table-wrap">
                   <table class="admin-table">
@@ -90,12 +440,15 @@
                         <th>Email</th>
                         <th>Phone</th>
                         <th>Orders</th>
+                        <th>Total Spent</th>
+                        <th>Avg Order Value</th>
+                        <th>Segments</th>
                         <th>Joined</th>
                         <th></th>
                       </tr>
                     </thead>
                     <tbody id="customers-tbody">
-                      <tr><td colspan="6" class="admin-table-empty">Loading…</td></tr>
+                      <tr><td colspan="9" class="admin-table-empty">Loading…</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -106,6 +459,13 @@
       `;
 
       wireLogout();
+      renderSegmentTabs();
+
+      document.getElementById('c360-close').addEventListener('click', closeSlideover);
+      document.getElementById('c360-overlay').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeSlideover();
+      });
+
       await loadCustomers();
     }
 

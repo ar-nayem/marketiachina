@@ -178,8 +178,29 @@ function renderOrderDetail() {
   const total = pick(o, 'totalBdt', 'total_bdt');
   const status = pick(o, 'status') || 'pending';
   const items = o.items || [];
+  const history = Array.isArray(o.history) ? o.history : [];
 
   document.getElementById('order-slideover-title').textContent = `Order ${orderNumber}`;
+
+  const historyRows = history.length
+    ? history
+        .map((h) => {
+          const note = pick(h, 'note');
+          const adminName = pick(h, 'adminName') || 'System';
+          const createdAt = pick(h, 'createdAt');
+          return `
+            <div style="padding:8px 0;border-bottom:1px solid var(--border-color);">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                ${statusBadge(h.status)}
+                <span style="color:var(--text-muted);font-size:11px;">${escapeHtml(formatDate(createdAt))}</span>
+              </div>
+              ${note ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">${escapeHtml(note)}</div>` : ''}
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">by ${escapeHtml(adminName)}</div>
+            </div>
+          `;
+        })
+        .join('')
+    : '';
 
   const itemRows = items.length
     ? items
@@ -229,6 +250,13 @@ function renderOrderDetail() {
       </div>
     </div>
 
+    <div>
+      <div class="form-label">Status Timeline</div>
+      ${history.length
+        ? `<div style="border-top:1px solid var(--border-color);">${historyRows}</div>`
+        : ''}
+    </div>
+
     <div style="border-top:1px solid var(--border-color);padding-top:12px;font-size:13px;display:flex;flex-direction:column;gap:6px;">
       <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary);">Subtotal</span><span>${money(subtotal)}</span></div>
       <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary);">Shipping fee</span><span>${money(shippingFee)}</span></div>
@@ -245,10 +273,13 @@ function renderOrderDetail() {
       <select id="order-status-select" class="form-input">
         ${STATUSES.map((s) => `<option value="${s}" ${s === status ? 'selected' : ''}>${statusLabel(s)}</option>`).join('')}
       </select>
+      <label class="form-label" for="order-status-note" style="margin-top:10px;">Note (optional)</label>
+      <textarea id="order-status-note" class="form-input" rows="2" placeholder="Reason for this status change…"></textarea>
     </div>
   `;
 
   document.getElementById('order-slideover-footer').innerHTML = `
+    <a href="/admin/returns.html?orderId=${o.id}" class="btn-secondary" style="text-decoration:none;text-align:center;">Create Return</a>
     <button type="button" class="btn-secondary" id="order-close-btn">Close</button>
     <button type="button" class="btn-primary" id="order-update-status-btn">Update Status</button>
   `;
@@ -284,6 +315,11 @@ async function submitStatusUpdate() {
   const newStatus = select ? select.value : null;
   if (!newStatus) return;
 
+  const noteField = document.getElementById('order-status-note');
+  const note = noteField ? noteField.value.trim() : '';
+  const payload = { status: newStatus };
+  if (note) payload.note = note;
+
   const btn = document.getElementById('order-update-status-btn');
   if (btn) {
     btn.disabled = true;
@@ -293,7 +329,7 @@ async function submitStatusUpdate() {
   try {
     await apiFetch(`/api/admin/orders/${activeOrder.id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ status: newStatus }),
+      body: JSON.stringify(payload),
     });
 
     activeOrder.status = newStatus;
@@ -302,7 +338,10 @@ async function submitStatusUpdate() {
     if (listItem) listItem.status = newStatus;
 
     updateOrderRow({ id: activeOrder.id, status: newStatus });
-    renderOrderDetail();
+
+    // Refetch to get an accurate history list from the server rather than
+    // trying to reconstruct the new entry's timestamp on the client.
+    await openOrder(activeOrder.id);
   } catch (err) {
     showError(err.message);
   } finally {

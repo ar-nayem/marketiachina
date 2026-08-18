@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Returns &amp; Refunds | Marketia China Admin</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/tailwind.build.css" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/glass.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+  <link rel="stylesheet" href="/admin/css/admin.css" />
+
+  <style>
+    /* Page-specific hand-authored CSS (no reliance on unproven Tailwind utility classes) */
+    .admin-form-section-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--mc-china-red);
+      padding-top: 14px;
+      margin-top: 4px;
+      border-top: 1px solid var(--border-color);
+    }
+    .admin-form-section-title.first {
+      border-top: none;
+      padding-top: 0;
+      margin-top: 0;
+    }
+    .admin-form-row {
+      display: flex;
+      gap: 12px;
+    }
+    .admin-form-row > div {
+      flex: 1;
+      min-width: 0;
+    }
+    textarea.form-input {
+      min-height: 70px;
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 1.5;
+      resize: vertical;
+    }
+    .admin-field-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .admin-field-error {
+      color: var(--mc-china-red);
+      font-size: 12px;
+      margin-top: 4px;
+      min-height: 14px;
+    }
+    .admin-inline-banner {
+      display: none;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .admin-inline-banner.show { display: block; }
+    .admin-inline-banner.error { background: var(--mc-china-red-light); color: var(--mc-china-red); }
+    .admin-inline-banner.success { background: rgba(16, 163, 74, 0.12); color: #10A34A; }
+    .admin-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      padding: 12px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      z-index: 200;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+    .admin-toast.show { opacity: 1; transform: translateY(0); }
+    .admin-toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+    .admin-toolbar .form-input {
+      margin: 0;
+    }
+    .admin-toolbar-filter {
+      width: 200px;
+      flex: 0 0 auto;
+    }
+    .admin-dropzone {
+      border: 1.5px dashed var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .admin-dropzone:hover,
+    .admin-dropzone.dragover {
+      border-color: var(--mc-china-red);
+      background: var(--bg-tertiary);
+    }
+    .admin-media-strip {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .admin-media-item {
+      position: relative;
+      width: 64px;
+    }
+    .admin-media-thumb {
+      width: 64px;
+      height: 64px;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      background: var(--bg-tertiary);
+      display: block;
+      border: 1px solid var(--border-color);
+    }
+    .admin-media-remove-btn {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--mc-china-red);
+      font-size: 10px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .admin-return-reason {
+      max-width: 260px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
+    }
+    @media (max-width: 640px) {
+      .admin-form-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-shell" id="admin-shell">
+    <div class="admin-main">
+      <div class="admin-topbar">
+        <h1>Returns &amp; Refunds</h1>
+      </div>
+      <div class="admin-content">
+        <div class="admin-panel">
+          <div id="admin-banner" class="admin-inline-banner"></div>
+          <div class="admin-panel-header">
+            <h2>All Returns</h2>
+            <button id="add-return-btn" class="btn-primary" type="button">+ New Return</button>
+          </div>
+          <div class="admin-toolbar">
+            <select class="form-input admin-toolbar-filter" id="return-status-filter">
+              <option value="">All Statuses</option>
+              <option value="requested">Requested</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="return_in_transit">Return In Transit</option>
+              <option value="received">Received</option>
+              <option value="refunded">Refunded</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Order #</th>
+                  <th>Customer</th>
+                  <th>Reason</th>
+                  <th>Status</th>
+                  <th>Refund Amount</th>
+                  <th>Created</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="returns-tbody">
+                <tr><td colspan="7"><div class="admin-table-empty">Loading returns…</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide-over backdrop (reuses storefront .modal-overlay) -->
+  <div class="modal-overlay" id="slideover-overlay"></div>
+
+  <!-- Return create/edit slide-over -->
+  <div class="admin-slideover" id="return-slideover">
+    <div class="admin-slideover-header">
+      <h2 id="slideover-title">New Return</h2>
+      <button class="admin-icon-btn" id="slideover-close" type="button" title="Close">✕</button>
+    </div>
+    <div class="admin-slideover-body">
+      <form id="return-form">
+        <!-- Create-mode fields -->
+        <div id="create-fields">
+          <div class="admin-form-section-title first">Order</div>
+          <div class="admin-form-row">
+            <div>
+              <label class="form-label">Order ID</label>
+              <input class="form-input" id="f-orderId" type="number" min="1" step="1" />
+            </div>
+            <div>
+              <label class="form-label">Product ID (optional)</label>
+              <input class="form-input" id="f-productId" type="text" />
+            </div>
+          </div>
+
+          <div class="admin-form-section-title">Reason</div>
+          <div>
+            <label class="form-label">Reason for return</label>
+            <textarea class="form-input" id="f-reason" placeholder="Describe why the customer is returning this item…"></textarea>
+            <div class="admin-field-error" id="err-reason"></div>
+          </div>
+
+          <div class="admin-form-section-title">Refund</div>
+          <div>
+            <label class="form-label">Refund Amount (BDT, optional)</label>
+            <input class="form-input" id="f-refundAmount" type="number" step="0.01" min="0" />
+          </div>
+
+          <div class="admin-form-section-title">Evidence Photos</div>
+          <div>
+            <label class="form-label">Photos</label>
+            <div class="admin-dropzone" id="media-dropzone">
+              Drag &amp; drop photos here, or click to browse
+              <input type="file" id="media-file-input" accept="image/*" multiple style="display:none;" />
+            </div>
+            <div class="admin-field-error" id="err-media"></div>
+            <div class="admin-media-strip" id="media-strip"></div>
+          </div>
+        </div>
+
+        <!-- Edit-mode fields -->
+        <div id="edit-fields" style="display:none;">
+          <div class="admin-form-section-title first">Order</div>
+          <div style="font-size:13px;color:var(--text-secondary);">
+            <div><strong id="edit-order-number"></strong> &middot; <span id="edit-customer-name"></span></div>
+          </div>
+
+          <div class="admin-form-section-title">Reason (read-only)</div>
+          <div style="font-size:13px;color:var(--text-secondary);white-space:pre-wrap;" id="edit-reason-display"></div>
+
+          <div class="admin-form-section-title">Evidence Photos (read-only)</div>
+          <div class="admin-media-strip" id="edit-media-strip"></div>
+
+          <div class="admin-form-section-title">Progress</div>
+          <div class="admin-form-row">
+            <div>
+              <label class="form-label">Status</label>
+              <select class="form-input" id="f-editStatus">
+                <option value="requested">Requested</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="return_in_transit">Return In Transit</option>
+                <option value="received">Received</option>
+                <option value="refunded">Refunded</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Refund Amount (BDT)</label>
+              <input class="form-input" id="f-editRefundAmount" type="number" step="0.01" min="0" />
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="admin-slideover-footer">
+      <button class="btn-secondary" id="slideover-cancel" type="button">Cancel</button>
+      <button class="btn-primary" id="slideover-save" type="submit" form="return-form">Save Return</button>
+    </div>
+  </div>
+
+  <div class="admin-toast" id="admin-toast"></div>
+
+  <script type="module">
+    import { apiFetch, requireAdminAuth, renderSidebar, wireLogout, escapeHtml, formatDate } from './js/adminShell.js';
+
+    let returns = [];
+    let editingId = null;
+    let currentMedia = [];
+    let lockedOrderId = null;
+
+    function money(value) {
+      const n = Number(value);
+      return Number.isFinite(n) ? `৳${n.toLocaleString('en-US')}` : '—';
+    }
+
+    function imgSrc(path) {
+      if (!path) return '';
+      if (/^https?:\/\//i.test(path) || /^data:/i.test(path) || path.startsWith('/')) return path;
+      return '/' + path.replace(/^\.?\//, '');
+    }
+
+    const STATUS_BADGE_CLASS = {
+      requested: 'admin-badge-neutral',
+      approved: 'admin-badge-gold',
+      rejected: 'admin-badge-red',
+      return_in_transit: 'admin-badge-gold',
+      received: 'admin-badge-gold',
+      refunded: 'admin-badge-green',
+      completed: 'admin-badge-green',
+    };
+
+    function statusLabel(status) {
+      if (!status) return '';
+      return status.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    }
+
+    function statusBadge(status) {
+      const cls = STATUS_BADGE_CLASS[status] || 'admin-badge-neutral';
+      return `<span class="admin-badge ${cls}">${escapeHtml(statusLabel(status))}</span>`;
+    }
+
+    async function loadReturns() {
+      const tbody = document.getElementById('returns-tbody');
+      try {
+        const statusFilter = document.getElementById('return-status-filter').value;
+        const qs = statusFilter ? `?status=${encodeURIComponent(statusFilter)}` : '';
+        const data = await apiFetch(`/api/admin/returns${qs}`);
+        returns = data.returns || [];
+        renderTable();
+      } catch (err) {
+        showBanner(err.message, 'error');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7"><div class="admin-table-empty">Failed to load returns.</div></td></tr>';
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('returns-tbody');
+      if (!returns.length) {
+        tbody.innerHTML = '<tr><td colspan="7"><div class="admin-table-empty">No returns found.</div></td></tr>';
+        return;
+      }
+      tbody.innerHTML = returns.map(r => `
+        <tr>
+          <td><strong>${escapeHtml(r.orderNumber)}</strong></td>
+          <td>${escapeHtml(r.customerName)}</td>
+          <td><span class="admin-return-reason" title="${escapeHtml(r.reason)}">${escapeHtml(r.reason)}</span></td>
+          <td>${statusBadge(r.status)}</td>
+          <td>${r.refundAmountBDT !== null && r.refundAmountBDT !== undefined ? money(r.refundAmountBDT) : '—'}</td>
+          <td>${escapeHtml(formatDate(r.createdAt))}</td>
+          <td>
+            <div class="admin-row-actions">
+              <button class="admin-icon-btn edit-btn" data-id="${r.id}" title="Edit">✏️</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', () => openEdit(btn.dataset.id)));
+    }
+
+    const overlay = document.getElementById('slideover-overlay');
+    const slideover = document.getElementById('return-slideover');
+
+    function openSlideover() {
+      overlay.classList.add('open');
+      slideover.classList.add('open');
+    }
+    function closeSlideover() {
+      overlay.classList.remove('open');
+      slideover.classList.remove('open');
+      editingId = null;
+    }
+    overlay.addEventListener('click', closeSlideover);
+    document.getElementById('slideover-close').addEventListener('click', closeSlideover);
+    document.getElementById('slideover-cancel').addEventListener('click', closeSlideover);
+
+    function clearFieldErrors() {
+      document.querySelectorAll('.admin-field-error').forEach(el => { el.textContent = ''; });
+    }
+    function setFieldError(id, msg) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = msg || '';
+    }
+
+    function openCreate(prefillOrderId) {
+      editingId = null;
+      currentMedia = [];
+      lockedOrderId = prefillOrderId || null;
+      document.getElementById('slideover-title').textContent = 'New Return';
+      document.getElementById('create-fields').style.display = '';
+      document.getElementById('edit-fields').style.display = 'none';
+      clearFieldErrors();
+
+      const orderIdInput = document.getElementById('f-orderId');
+      orderIdInput.value = lockedOrderId || '';
+      orderIdInput.readOnly = !!lockedOrderId;
+      document.getElementById('f-productId').value = '';
+      document.getElementById('f-reason').value = '';
+      document.getElementById('f-refundAmount').value = '';
+      renderMediaStrip();
+
+      openSlideover();
+    }
+
+    function openEdit(id) {
+      const r = returns.find(x => String(x.id) === String(id));
+      if (!r) return;
+      editingId = r.id;
+      document.getElementById('slideover-title').textContent = 'Update Return';
+      document.getElementById('create-fields').style.display = 'none';
+      document.getElementById('edit-fields').style.display = '';
+      clearFieldErrors();
+
+      document.getElementById('edit-order-number').textContent = r.orderNumber || '';
+      document.getElementById('edit-customer-name').textContent = r.customerName || '';
+      document.getElementById('edit-reason-display').textContent = r.reason || '';
+      document.getElementById('f-editStatus').value = r.status || 'requested';
+      document.getElementById('f-editRefundAmount').value = r.refundAmountBDT !== null && r.refundAmountBDT !== undefined ? r.refundAmountBDT : '';
+
+      const strip = document.getElementById('edit-media-strip');
+      const media = Array.isArray(r.evidenceMedia) ? r.evidenceMedia : [];
+      strip.innerHTML = media.length
+        ? media.map(m => `<img class="admin-media-thumb" src="${escapeHtml(imgSrc(m.url))}" alt="" />`).join('')
+        : '<div style="font-size:12px;color:var(--text-muted);">No evidence photos.</div>';
+
+      openSlideover();
+    }
+
+    document.getElementById('add-return-btn').addEventListener('click', () => openCreate());
+
+    document.getElementById('return-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const saveBtn = document.getElementById('slideover-save');
+      saveBtn.disabled = true;
+
+      try {
+        if (editingId) {
+          const status = document.getElementById('f-editStatus').value;
+          const refundRaw = document.getElementById('f-editRefundAmount').value.trim();
+          const refundAmountBDT = refundRaw === '' ? null : parseFloat(refundRaw);
+          await apiFetch(`/api/admin/returns/${encodeURIComponent(editingId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status, refundAmountBDT }),
+          });
+          closeSlideover();
+          showToast('Return updated');
+          await loadReturns();
+        } else {
+          clearFieldErrors();
+          const orderIdRaw = document.getElementById('f-orderId').value.trim();
+          const orderId = orderIdRaw === '' ? null : parseInt(orderIdRaw, 10);
+          if (!orderId) {
+            showBanner('Order ID is required.', 'error');
+            saveBtn.disabled = false;
+            return;
+          }
+          const reason = document.getElementById('f-reason').value.trim();
+          if (!reason) {
+            setFieldError('err-reason', 'Reason is required.');
+            saveBtn.disabled = false;
+            return;
+          }
+          const productId = document.getElementById('f-productId').value.trim() || null;
+          const refundRaw = document.getElementById('f-refundAmount').value.trim();
+          const refundAmountBDT = refundRaw === '' ? null : parseFloat(refundRaw);
+
+          await apiFetch('/api/admin/returns', {
+            method: 'POST',
+            body: JSON.stringify({
+              orderId,
+              productId,
+              reason,
+              refundAmountBDT,
+              evidenceMedia: currentMedia,
+            }),
+          });
+          closeSlideover();
+          showToast('Return created');
+          await loadReturns();
+        }
+      } catch (err) {
+        showBanner(err.message, 'error');
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    // --- Evidence photo uploader (adapted from products.html's media dropzone,
+    // simplified: no primary-image concept, no reorder, just upload + thumbnail + delete) ---
+    async function doMediaUpload(fileList) {
+      const formData = new FormData();
+      Array.from(fileList).forEach(file => formData.append('files', file));
+      const res = await fetch('/api/admin/media/upload', { method: 'POST', body: formData });
+      let data = {};
+      try { data = await res.json(); } catch (e) { /* non-JSON error body, ignore */ }
+      if (!res.ok) {
+        throw new Error(data.error || 'Upload failed');
+      }
+      return data;
+    }
+
+    function renderMediaStrip() {
+      const strip = document.getElementById('media-strip');
+      strip.innerHTML = currentMedia.map((m, i) => {
+        const thumb = m.type === 'video'
+          ? '<div class="admin-media-thumb" style="display:flex;align-items:center;justify-content:center;font-size:20px;">🎬</div>'
+          : `<img class="admin-media-thumb" src="${escapeHtml(imgSrc(m.url))}" alt="" />`;
+        return `
+          <div class="admin-media-item">
+            ${thumb}
+            <button type="button" class="admin-media-remove-btn" data-index="${i}" title="Remove">✕</button>
+          </div>
+        `;
+      }).join('');
+
+      strip.querySelectorAll('.admin-media-remove-btn').forEach(btn => btn.addEventListener('click', () => {
+        currentMedia.splice(Number(btn.dataset.index), 1);
+        renderMediaStrip();
+      }));
+    }
+
+    async function handleMediaFiles(fileList) {
+      setFieldError('err-media', '');
+      const files = Array.from(fileList || []);
+      if (!files.length) return;
+      try {
+        const data = await doMediaUpload(files);
+        (data.files || []).forEach(item => currentMedia.push(item));
+        renderMediaStrip();
+      } catch (err) {
+        setFieldError('err-media', err.message);
+      }
+    }
+
+    function wireMediaUploader() {
+      const dropzone = document.getElementById('media-dropzone');
+      const fileInput = document.getElementById('media-file-input');
+      dropzone.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', () => {
+        handleMediaFiles(fileInput.files);
+        fileInput.value = '';
+      });
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      });
+      dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('dragover');
+      });
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        handleMediaFiles(e.dataTransfer.files);
+      });
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('admin-toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    let bannerTimer = null;
+    function showBanner(msg, type) {
+      const el = document.getElementById('admin-banner');
+      el.textContent = msg;
+      el.className = `admin-inline-banner show ${type || 'error'}`;
+      clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(() => el.classList.remove('show'), 5000);
+    }
+
+    (async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+      document.getElementById('admin-shell').insertAdjacentHTML('afterbegin', renderSidebar('returns', admin));
+      wireLogout();
+
+      document.getElementById('return-status-filter').addEventListener('change', loadReturns);
+      wireMediaUploader();
+
+      await loadReturns();
+
+      // Deep-link from Orders page: ?orderId=<id> auto-opens the create form, pre-filled + locked.
+      const params = new URLSearchParams(window.location.search);
+      const orderId = params.get('orderId');
+      if (orderId) {
+        openCreate(orderId);
+      }
+    })();
+  </script>
+</body>
+</html>
