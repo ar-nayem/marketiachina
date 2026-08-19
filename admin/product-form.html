@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add Product | Marketia China Admin</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/tailwind.build.css" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/glass.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+  <link rel="stylesheet" href="/admin/css/admin.css" />
+
+  <style>
+    .admin-form-section-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--mc-china-red);
+      padding-top: 14px;
+      margin-top: 4px;
+      border-top: 1px solid var(--border-color);
+    }
+    .admin-form-section-title.first {
+      border-top: none;
+      padding-top: 0;
+      margin-top: 0;
+    }
+    .admin-form-row {
+      display: flex;
+      gap: 12px;
+    }
+    .admin-form-row > div {
+      flex: 1;
+      min-width: 0;
+    }
+    .admin-checkbox-group {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+    .admin-checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .admin-checkbox-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--mc-china-red);
+    }
+    .admin-checkbox-row label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    textarea.form-input {
+      min-height: 90px;
+      font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      resize: vertical;
+    }
+    .admin-field-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .admin-field-error {
+      color: var(--mc-china-red);
+      font-size: 12px;
+      margin-top: 4px;
+      min-height: 14px;
+    }
+    .admin-inline-banner {
+      display: none;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .admin-inline-banner.show { display: block; }
+    .admin-inline-banner.error { background: var(--mc-china-red-light); color: var(--mc-china-red); }
+    .admin-inline-banner.success { background: rgba(16, 163, 74, 0.12); color: #10A34A; }
+    .admin-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      padding: 12px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      z-index: 200;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+    .admin-toast.show { opacity: 1; transform: translateY(0); }
+    .admin-dropzone {
+      border: 1.5px dashed var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .admin-dropzone:hover,
+    .admin-dropzone.dragover {
+      border-color: var(--mc-china-red);
+      background: var(--bg-tertiary);
+    }
+    .admin-media-strip {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .admin-media-item {
+      position: relative;
+      width: 64px;
+    }
+    .admin-media-thumb {
+      width: 64px;
+      height: 64px;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      background: var(--bg-tertiary);
+      display: block;
+      border: 1px solid var(--border-color);
+    }
+    .admin-media-primary-badge {
+      position: absolute;
+      top: -6px;
+      left: -6px;
+      font-size: 9px;
+      padding: 1px 6px;
+    }
+    .admin-media-remove-btn {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--mc-china-red);
+      font-size: 10px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .admin-media-reorder {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .admin-media-reorder button {
+      width: 20px;
+      height: 16px;
+      font-size: 9px;
+      line-height: 1;
+      border: 1px solid var(--border-color);
+      border-radius: 3px;
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 0;
+    }
+    .admin-media-reorder button:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+    .admin-profit-display {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background: var(--bg-tertiary);
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-top: 4px;
+    }
+    .product-form-page {
+      max-width: 760px;
+    }
+    .product-form-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 20px;
+      border-top: 1px solid var(--border-color);
+      margin-top: 8px;
+    }
+    .admin-topbar-back {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .admin-topbar-back:hover { color: var(--mc-china-red); }
+    @media (max-width: 640px) {
+      .admin-form-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-shell" id="admin-shell">
+    <div class="admin-main">
+      <div class="admin-topbar">
+        <div>
+          <a href="/admin/products.html" class="admin-topbar-back">&larr; Back to Products</a>
+          <h1 id="page-title">Add Product</h1>
+        </div>
+      </div>
+      <div class="admin-content">
+        <div class="admin-panel product-form-page">
+          <div id="admin-banner" class="admin-inline-banner"></div>
+
+          <form id="product-form" style="padding:20px;">
+            <div id="field-id-wrap" style="display:none;">
+              <label class="form-label">ID</label>
+              <input class="form-input" id="f-id" type="text" readonly />
+            </div>
+
+            <div class="admin-form-section-title first">Basic Info</div>
+            <div class="admin-form-row">
+              <div>
+                <label class="form-label">Category</label>
+                <select class="form-input" id="f-category"></select>
+              </div>
+              <div>
+                <label class="form-label">Status</label>
+                <select class="form-input" id="f-status">
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="form-label">Media (images / videos)</label>
+              <div class="admin-dropzone" id="media-dropzone">
+                Drag &amp; drop images or videos here, or click to browse
+                <input type="file" id="media-file-input" accept="image/*,video/mp4,video/webm" multiple style="display:none;" />
+              </div>
+              <div class="admin-field-hint">The first image will be used as the primary product/marketing image.</div>
+              <div class="admin-field-error" id="err-media"></div>
+              <div class="admin-media-strip" id="media-strip"></div>
+            </div>
+            <div>
+              <label class="form-label">3D Model Type</label>
+              <input class="form-input" id="f-model3dType" type="text" placeholder="e.g. headphones, watch, keyboard" />
+            </div>
+            <div class="admin-checkbox-group">
+              <div class="admin-checkbox-row">
+                <input type="checkbox" id="f-isFeatured" />
+                <label for="f-isFeatured">Featured</label>
+              </div>
+              <div class="admin-checkbox-row">
+                <input type="checkbox" id="f-isFactoryDirect" />
+                <label for="f-isFactoryDirect">Factory Direct</label>
+              </div>
+            </div>
+
+            <div class="admin-form-section-title">Rating</div>
+            <div class="admin-form-row">
+              <div>
+                <label class="form-label">Rating (0–5)</label>
+                <input class="form-input" id="f-rating" type="number" step="0.1" min="0" max="5" />
+              </div>
+              <div>
+                <label class="form-label">Reviews Count</label>
+                <input class="form-input" id="f-reviewsCount" type="number" step="1" min="0" />
+              </div>
+            </div>
+
+            <div class="admin-form-section-title">Pricing</div>
+            <div class="admin-form-row">
+              <div>
+                <label class="form-label">Price (BDT)</label>
+                <input class="form-input" id="f-priceBDT" type="number" step="0.01" min="0" />
+              </div>
+              <div>
+                <label class="form-label">Price (USD)</label>
+                <input class="form-input" id="f-priceUSD" type="number" step="0.01" min="0" />
+              </div>
+              <div>
+                <label class="form-label">Price (CNY)</label>
+                <input class="form-input" id="f-priceCNY" type="number" step="0.01" min="0" />
+              </div>
+              <div>
+                <label class="form-label">Cost Price (BDT)</label>
+                <input class="form-input" id="f-costPriceBDT" type="number" step="0.01" min="0" />
+              </div>
+            </div>
+            <div>
+              <label class="form-label">Profit Margin</label>
+              <div class="admin-profit-display" id="profit-margin-display">—</div>
+            </div>
+
+            <div class="admin-form-section-title">Inventory &amp; Origin</div>
+            <div class="admin-form-row">
+              <div>
+                <label class="form-label">MOQ</label>
+                <input class="form-input" id="f-moq" type="number" step="1" min="0" />
+              </div>
+              <div>
+                <label class="form-label">Origin City</label>
+                <input class="form-input" id="f-originCity" type="text" placeholder="e.g. Shenzhen, Guangdong" />
+              </div>
+            </div>
+
+            <div class="admin-form-section-title">Shipping</div>
+            <div class="admin-checkbox-group">
+              <div class="admin-checkbox-row">
+                <input type="checkbox" id="f-shipAir" />
+                <label for="f-shipAir">Air</label>
+              </div>
+              <div class="admin-checkbox-row">
+                <input type="checkbox" id="f-shipSea" />
+                <label for="f-shipSea">Sea</label>
+              </div>
+            </div>
+            <div class="admin-form-row">
+              <div>
+                <label class="form-label">Lead Time (Air)</label>
+                <input class="form-input" id="f-leadTimeAir" type="text" placeholder="e.g. 7-10 Days" />
+              </div>
+              <div>
+                <label class="form-label">Lead Time (Sea)</label>
+                <input class="form-input" id="f-leadTimeSea" type="text" placeholder="e.g. 40-50 Days" />
+              </div>
+            </div>
+
+            <div class="admin-form-section-title">Product Name</div>
+            <div>
+              <label class="form-label">Name (Bengali)</label>
+              <input class="form-input" id="f-name-bn" type="text" />
+            </div>
+            <div>
+              <label class="form-label">Name (English)</label>
+              <input class="form-input" id="f-name-en" type="text" />
+            </div>
+            <div>
+              <label class="form-label">Name (Chinese)</label>
+              <input class="form-input" id="f-name-zh" type="text" />
+            </div>
+
+            <div class="admin-form-section-title">Tagline</div>
+            <div>
+              <label class="form-label">Tagline (Bengali)</label>
+              <input class="form-input" id="f-tagline-bn" type="text" />
+            </div>
+            <div>
+              <label class="form-label">Tagline (English)</label>
+              <input class="form-input" id="f-tagline-en" type="text" />
+            </div>
+            <div>
+              <label class="form-label">Tagline (Chinese)</label>
+              <input class="form-input" id="f-tagline-zh" type="text" />
+            </div>
+
+            <div class="admin-form-section-title">Description</div>
+            <div>
+              <label class="form-label">Description (Bengali)</label>
+              <input class="form-input" id="f-desc-bn" type="text" />
+            </div>
+            <div>
+              <label class="form-label">Description (English)</label>
+              <input class="form-input" id="f-desc-en" type="text" />
+            </div>
+            <div>
+              <label class="form-label">Description (Chinese)</label>
+              <input class="form-input" id="f-desc-zh" type="text" />
+            </div>
+
+            <div class="admin-form-section-title">Specifications (JSON)</div>
+            <div>
+              <label class="form-label">Specs (Bengali)</label>
+              <textarea class="form-input" id="f-specs-bn" placeholder='[{"label":"...","value":"..."}]'></textarea>
+              <div class="admin-field-hint">Array of {label, value} objects.</div>
+              <div class="admin-field-error" id="err-specs-bn"></div>
+            </div>
+            <div>
+              <label class="form-label">Specs (English)</label>
+              <textarea class="form-input" id="f-specs-en" placeholder='[{"label":"...","value":"..."}]'></textarea>
+              <div class="admin-field-hint">Array of {label, value} objects.</div>
+              <div class="admin-field-error" id="err-specs-en"></div>
+            </div>
+            <div>
+              <label class="form-label">Specs (Chinese)</label>
+              <textarea class="form-input" id="f-specs-zh" placeholder='[{"label":"...","value":"..."}]'></textarea>
+              <div class="admin-field-hint">Array of {label, value} objects.</div>
+              <div class="admin-field-error" id="err-specs-zh"></div>
+            </div>
+
+            <div class="admin-form-section-title">Wholesale Tiers (JSON)</div>
+            <div>
+              <label class="form-label">Tiers (shared across languages)</label>
+              <textarea class="form-input" id="f-tiers" placeholder='[{"min":10,"max":49,"priceBDT":0,"priceUSD":0,"priceCNY":0,"discount":"0%"}]'></textarea>
+              <div class="admin-field-hint">Array of {min, max, priceBDT, priceUSD, priceCNY, discount}.</div>
+              <div class="admin-field-error" id="err-tiers"></div>
+            </div>
+          </form>
+
+          <div class="product-form-actions">
+            <button class="btn-primary" id="save-btn" type="submit" form="product-form">Save Product</button>
+            <a href="/admin/products.html" class="btn-secondary" id="cancel-btn">Cancel</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="admin-toast" id="admin-toast"></div>
+
+  <script type="module">
+    import { apiFetch, requireAdminAuth, renderSidebar, wireLogout, escapeHtml } from './js/adminShell.js';
+
+    const productId = new URLSearchParams(window.location.search).get('id');
+    let categories = [];
+    let currentMedia = [];
+
+    function money(n) {
+      const num = Number(n);
+      return Number.isFinite(num) ? num.toLocaleString('en-US') : '0';
+    }
+
+    function imgSrc(path) {
+      if (!path) return '';
+      if (/^https?:\/\//i.test(path) || /^data:/i.test(path) || path.startsWith('/')) return path;
+      return '/' + path.replace(/^\.?\//, '');
+    }
+
+    async function loadCategories() {
+      try {
+        const data = await apiFetch('/api/admin/categories');
+        categories = data.categories || [];
+      } catch (err) {
+        categories = [];
+        showBanner(err.message, 'error');
+      }
+    }
+
+    function populateFormCategoryOptions() {
+      const sel = document.getElementById('f-category');
+      const active = categories.filter(c => c.isActive);
+      sel.innerHTML = active
+        .map(c => `<option value="${escapeHtml(c.slug)}">${escapeHtml((c.name && c.name.en) || c.slug)}</option>`)
+        .join('');
+    }
+
+    function ensureCategoryOption(slug) {
+      if (!slug) return;
+      const sel = document.getElementById('f-category');
+      const exists = Array.from(sel.options).some(o => o.value === slug);
+      if (exists) return;
+      const cat = categories.find(c => c.slug === slug);
+      const label = cat ? ((cat.name && cat.name.en) || cat.slug) : slug;
+      const opt = document.createElement('option');
+      opt.value = slug;
+      opt.textContent = cat && !cat.isActive ? `${label} (inactive)` : label;
+      sel.insertBefore(opt, sel.firstChild);
+    }
+
+    function fillForm(p) {
+      const f = id => document.getElementById(id);
+      f('f-id').value = p ? p.id : '';
+      // For a new product (p is null), leave whatever populateFormCategoryOptions()
+      // already auto-selected (the browser defaults a freshly-populated <select>
+      // to its first option) - explicitly blanking it here left the field looking
+      // populated but actually unselected, so Save always failed with a
+      // confusing "category is required" error even though a category was visibly showing.
+      if (p) f('f-category').value = p.category || '';
+      f('f-status').value = p ? (p.status || 'published') : 'published';
+      currentMedia = (p && Array.isArray(p.media)) ? [...p.media] : [];
+      renderMediaStrip();
+      f('f-model3dType').value = p ? (p.model3dType || '') : '';
+      f('f-isFeatured').checked = p ? !!p.isFeatured : false;
+      f('f-isFactoryDirect').checked = p ? !!p.isFactoryDirect : false;
+      f('f-rating').value = p && p.rating !== undefined && p.rating !== null ? p.rating : '';
+      f('f-reviewsCount').value = p && p.reviewsCount !== undefined && p.reviewsCount !== null ? p.reviewsCount : '';
+      f('f-priceBDT').value = p && p.priceBDT !== undefined && p.priceBDT !== null ? p.priceBDT : '';
+      f('f-priceUSD').value = p && p.priceUSD !== undefined && p.priceUSD !== null ? p.priceUSD : '';
+      f('f-priceCNY').value = p && p.priceCNY !== undefined && p.priceCNY !== null ? p.priceCNY : '';
+      f('f-costPriceBDT').value = p && p.costPriceBDT !== undefined && p.costPriceBDT !== null ? p.costPriceBDT : '';
+      updateProfitMargin();
+      f('f-moq').value = p && p.moq !== undefined && p.moq !== null ? p.moq : '';
+      f('f-originCity').value = p ? (p.originCity || '') : '';
+      const methods = p && Array.isArray(p.shippingMethods) ? p.shippingMethods : ['air', 'sea'];
+      f('f-shipAir').checked = methods.includes('air');
+      f('f-shipSea').checked = methods.includes('sea');
+      f('f-leadTimeAir').value = p ? (p.leadTimeAir || '') : '';
+      f('f-leadTimeSea').value = p ? (p.leadTimeSea || '') : '';
+      ['bn', 'en', 'zh'].forEach(lang => {
+        f(`f-name-${lang}`).value = (p && p.name && p.name[lang]) || '';
+        f(`f-tagline-${lang}`).value = (p && p.tagline && p.tagline[lang]) || '';
+        f(`f-desc-${lang}`).value = (p && p.description && p.description[lang]) || '';
+        f(`f-specs-${lang}`).value = JSON.stringify((p && p.specs && p.specs[lang]) || [], null, 2);
+      });
+      f('f-tiers').value = JSON.stringify((p && p.wholesaleTiers) || [], null, 2);
+    }
+
+    function clearFieldErrors() {
+      document.querySelectorAll('.admin-field-error').forEach(el => { el.textContent = ''; });
+    }
+    function setFieldError(id, msg) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = msg || '';
+    }
+
+    function collectPayload() {
+      clearFieldErrors();
+      let ok = true;
+      const f = id => document.getElementById(id);
+
+      const parseJsonField = (fieldId, errId, fallback) => {
+        const raw = f(fieldId).value.trim();
+        if (!raw) return fallback;
+        try {
+          return JSON.parse(raw);
+        } catch (e) {
+          setFieldError(errId, 'Invalid JSON: ' + e.message);
+          ok = false;
+          return fallback;
+        }
+      };
+
+      const specsBn = parseJsonField('f-specs-bn', 'err-specs-bn', []);
+      const specsEn = parseJsonField('f-specs-en', 'err-specs-en', []);
+      const specsZh = parseJsonField('f-specs-zh', 'err-specs-zh', []);
+      const tiers = parseJsonField('f-tiers', 'err-tiers', []);
+
+      if (!ok) return null;
+
+      const shippingMethods = [];
+      if (f('f-shipAir').checked) shippingMethods.push('air');
+      if (f('f-shipSea').checked) shippingMethods.push('sea');
+
+      const costRaw = f('f-costPriceBDT').value.trim();
+      const costPriceBDT = costRaw === '' ? null : parseFloat(costRaw);
+
+      const priceBDTRaw = f('f-priceBDT').value.trim();
+      const priceBDT = parseFloat(priceBDTRaw);
+      if (priceBDTRaw === '' || Number.isNaN(priceBDT)) {
+        showBanner('Price (BDT) is required.', 'error');
+        return null;
+      }
+
+      const nameEn = f('f-name-en').value.trim();
+      if (!nameEn) {
+        showBanner('Name (English) is required.', 'error');
+        return null;
+      }
+
+      return {
+        category: f('f-category').value,
+        status: f('f-status').value,
+        media: currentMedia,
+        costPriceBDT,
+        model3dType: f('f-model3dType').value.trim(),
+        isFeatured: f('f-isFeatured').checked,
+        isFactoryDirect: f('f-isFactoryDirect').checked,
+        rating: parseFloat(f('f-rating').value) || 0,
+        reviewsCount: parseInt(f('f-reviewsCount').value, 10) || 0,
+        priceBDT,
+        priceUSD: parseFloat(f('f-priceUSD').value) || 0,
+        priceCNY: parseFloat(f('f-priceCNY').value) || 0,
+        moq: parseInt(f('f-moq').value, 10) || 0,
+        originCity: f('f-originCity').value.trim(),
+        shippingMethods,
+        leadTimeAir: f('f-leadTimeAir').value.trim(),
+        leadTimeSea: f('f-leadTimeSea').value.trim(),
+        wholesaleTiers: tiers,
+        name: { bn: f('f-name-bn').value.trim(), en: nameEn, zh: f('f-name-zh').value.trim() },
+        tagline: { bn: f('f-tagline-bn').value.trim(), en: f('f-tagline-en').value.trim(), zh: f('f-tagline-zh').value.trim() },
+        description: { bn: f('f-desc-bn').value.trim(), en: f('f-desc-en').value.trim(), zh: f('f-desc-zh').value.trim() },
+        specs: { bn: specsBn, en: specsEn, zh: specsZh }
+      };
+    }
+
+    document.getElementById('product-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = collectPayload();
+      if (!payload) return;
+      const saveBtn = document.getElementById('save-btn');
+      saveBtn.disabled = true;
+      try {
+        if (productId) {
+          await apiFetch(`/api/admin/products/${encodeURIComponent(productId)}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+          });
+        } else {
+          await apiFetch('/api/admin/products', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+        }
+        showToast(productId ? 'Product updated' : 'Product created');
+        window.location.href = '/admin/products.html';
+      } catch (err) {
+        showBanner(err.message, 'error');
+        saveBtn.disabled = false;
+      }
+    });
+
+    function updateProfitMargin() {
+      const priceRaw = document.getElementById('f-priceBDT').value;
+      const costRaw = document.getElementById('f-costPriceBDT').value.trim();
+      const display = document.getElementById('profit-margin-display');
+      const price = parseFloat(priceRaw);
+      const cost = parseFloat(costRaw);
+      if (costRaw === '' || !Number.isFinite(price) || !Number.isFinite(cost)) {
+        display.textContent = '—';
+        return;
+      }
+      const profit = price - cost;
+      const marginPercent = price > 0 ? Math.round((profit / price) * 100) : 0;
+      display.textContent = `৳${money(profit)} (${marginPercent}%)`;
+    }
+
+    async function doMediaUpload(fileList) {
+      const formData = new FormData();
+      Array.from(fileList).forEach(file => formData.append('files', file));
+      const res = await fetch('/api/admin/media/upload', { method: 'POST', body: formData });
+      let data = {};
+      try { data = await res.json(); } catch (e) { /* non-JSON error body, ignore */ }
+      if (!res.ok) {
+        throw new Error(data.error || 'Upload failed');
+      }
+      return data;
+    }
+
+    function renderMediaStrip() {
+      const strip = document.getElementById('media-strip');
+      strip.innerHTML = currentMedia.map((m, i) => {
+        const thumb = m.type === 'video'
+          ? '<div class="admin-media-thumb" style="display:flex;align-items:center;justify-content:center;font-size:20px;">🎬</div>'
+          : `<img class="admin-media-thumb" src="${escapeHtml(imgSrc(m.url))}" alt="" onerror="this.outerHTML='<div class=&quot;admin-media-thumb&quot; style=&quot;display:flex;align-items:center;justify-content:center;font-size:20px;&quot;>📦</div>'" />`;
+        const badge = i === 0 ? '<span class="admin-badge admin-badge-gold admin-media-primary-badge">Primary</span>' : '';
+        return `
+          <div class="admin-media-item">
+            ${badge}
+            ${thumb}
+            <div class="admin-media-reorder">
+              <button type="button" class="media-move-up" data-index="${i}" title="Move up" ${i === 0 ? 'disabled' : ''}>▲</button>
+              <button type="button" class="media-move-down" data-index="${i}" title="Move down" ${i === currentMedia.length - 1 ? 'disabled' : ''}>▼</button>
+            </div>
+            <button type="button" class="admin-media-remove-btn" data-index="${i}" title="Remove">✕</button>
+          </div>
+        `;
+      }).join('');
+
+      strip.querySelectorAll('.admin-media-remove-btn').forEach(btn => btn.addEventListener('click', () => {
+        currentMedia.splice(Number(btn.dataset.index), 1);
+        renderMediaStrip();
+      }));
+      strip.querySelectorAll('.media-move-up').forEach(btn => btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.index);
+        if (idx <= 0) return;
+        const tmp = currentMedia[idx - 1];
+        currentMedia[idx - 1] = currentMedia[idx];
+        currentMedia[idx] = tmp;
+        renderMediaStrip();
+      }));
+      strip.querySelectorAll('.media-move-down').forEach(btn => btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.index);
+        if (idx >= currentMedia.length - 1) return;
+        const tmp = currentMedia[idx + 1];
+        currentMedia[idx + 1] = currentMedia[idx];
+        currentMedia[idx] = tmp;
+        renderMediaStrip();
+      }));
+    }
+
+    async function handleMediaFiles(fileList) {
+      setFieldError('err-media', '');
+      const files = Array.from(fileList || []);
+      if (!files.length) return;
+      if (currentMedia.length + files.length > 10) {
+        setFieldError('err-media', `Cannot add ${files.length} file(s): a product can have at most 10 media items (currently ${currentMedia.length}).`);
+        return;
+      }
+      try {
+        const data = await doMediaUpload(files);
+        (data.files || []).forEach(item => currentMedia.push(item));
+        renderMediaStrip();
+      } catch (err) {
+        setFieldError('err-media', err.message);
+      }
+    }
+
+    function wireMediaUploader() {
+      const dropzone = document.getElementById('media-dropzone');
+      const fileInput = document.getElementById('media-file-input');
+      dropzone.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', () => {
+        handleMediaFiles(fileInput.files);
+        fileInput.value = '';
+      });
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      });
+      dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('dragover');
+      });
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        handleMediaFiles(e.dataTransfer.files);
+      });
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('admin-toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    let bannerTimer = null;
+    function showBanner(msg, type) {
+      const el = document.getElementById('admin-banner');
+      el.textContent = msg;
+      el.className = `admin-inline-banner show ${type || 'error'}`;
+      clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(() => el.classList.remove('show'), 5000);
+    }
+
+    (async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+      document.getElementById('admin-shell').insertAdjacentHTML('afterbegin', renderSidebar('products', admin));
+      wireLogout();
+      document.getElementById('f-priceBDT').addEventListener('input', updateProfitMargin);
+      document.getElementById('f-costPriceBDT').addEventListener('input', updateProfitMargin);
+      wireMediaUploader();
+
+      await loadCategories();
+      populateFormCategoryOptions();
+
+      if (productId) {
+        document.title = 'Edit Product | Marketia China Admin';
+        document.getElementById('page-title').textContent = 'Edit Product';
+        document.getElementById('field-id-wrap').style.display = '';
+        try {
+          const data = await apiFetch('/api/admin/products');
+          const p = (data.products || []).find(x => String(x.id) === String(productId));
+          if (!p) {
+            showBanner('Product not found.', 'error');
+            return;
+          }
+          ensureCategoryOption(p.category);
+          fillForm(p);
+        } catch (err) {
+          showBanner(err.message, 'error');
+        }
+      } else {
+        document.title = 'Add Product | Marketia China Admin';
+        document.getElementById('page-title').textContent = 'Add Product';
+        document.getElementById('field-id-wrap').style.display = 'none';
+        fillForm(null);
+      }
+    })();
+  </script>
+</body>
+</html>
