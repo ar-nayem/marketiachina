@@ -124,7 +124,9 @@ export class ProductShowcase {
                 
                 <!-- Product Image & 3D Badge -->
                 <div class="product-img-wrapper">
-                  <img src="${prod.image}" alt="${name}" loading="lazy" class="drop-shadow-md" />
+                  ${prod.image
+                    ? `<img src="${prod.image}" alt="${name}" loading="lazy" class="drop-shadow-md" onerror="this.outerHTML='<span style=&quot;font-size:2.5rem;opacity:0.35;&quot;>📦</span>'" />`
+                    : '<span style="font-size:2.5rem;opacity:0.35;">📦</span>'}
                   
                   <!-- Top Badges -->
                   <div class="absolute top-3 left-3 flex flex-col gap-1.5 z-10">

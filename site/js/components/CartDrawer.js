@@ -49,7 +49,9 @@ export class CartDrawer {
 
           return `
             <div class="p-3.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] flex gap-3.5 items-center">
-              <img src="${prod.image}" alt="${name}" class="w-16 h-16 object-contain rounded-lg bg-[var(--bg-tertiary)] p-1 flex-shrink-0" />
+              ${prod.image
+                ? `<img src="${prod.image}" alt="${name}" class="w-16 h-16 object-contain rounded-lg bg-[var(--bg-tertiary)] p-1 flex-shrink-0" onerror="this.outerHTML='<span class=&quot;w-16 h-16 rounded-lg bg-[var(--bg-tertiary)] flex-shrink-0 flex items-center justify-center text-xl&quot;>📦</span>'" />`
+                : '<span class="w-16 h-16 rounded-lg bg-[var(--bg-tertiary)] flex-shrink-0 flex items-center justify-center text-xl">📦</span>'}
               
               <div class="flex-1 min-w-0">
                 <h4 class="text-xs font-bold text-[var(--text-primary)] truncate">${name}</h4>

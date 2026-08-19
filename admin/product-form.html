@@ -442,6 +442,12 @@
     const productId = new URLSearchParams(window.location.search).get('id');
     let categories = [];
     let currentMedia = [];
+    // Guards against saving before an in-progress image upload has actually
+    // attached to currentMedia - without this, clicking Save right after
+    // selecting a photo (a very natural fast workflow) could submit before
+    // the upload's fetch resolves, silently saving the product with zero
+    // media even though a photo was chosen.
+    let uploadsInFlight = 0;
 
     function money(n) {
       const num = Number(n);
@@ -603,6 +609,10 @@
 
     document.getElementById('product-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (uploadsInFlight > 0) {
+        showBanner('A photo is still uploading - please wait for it to finish before saving.', 'error');
+        return;
+      }
       const payload = collectPayload();
       if (!payload) return;
       const saveBtn = document.getElementById('save-btn');
@@ -696,6 +706,12 @@
       }));
     }
 
+    function updateSaveButtonUploadState() {
+      const saveBtn = document.getElementById('save-btn');
+      saveBtn.disabled = uploadsInFlight > 0;
+      saveBtn.textContent = uploadsInFlight > 0 ? 'Uploading photo…' : 'Save Product';
+    }
+
     async function handleMediaFiles(fileList) {
       setFieldError('err-media', '');
       const files = Array.from(fileList || []);
@@ -704,12 +720,17 @@
         setFieldError('err-media', `Cannot add ${files.length} file(s): a product can have at most 10 media items (currently ${currentMedia.length}).`);
         return;
       }
+      uploadsInFlight++;
+      updateSaveButtonUploadState();
       try {
         const data = await doMediaUpload(files);
         (data.files || []).forEach(item => currentMedia.push(item));
         renderMediaStrip();
       } catch (err) {
         setFieldError('err-media', err.message);
+      } finally {
+        uploadsInFlight--;
+        updateSaveButtonUploadState();
       }
     }
 
