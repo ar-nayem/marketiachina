@@ -93,6 +93,8 @@ function injectStylesOnce() {
       padding: 0;
     }
     .notif-bell-mark-all:hover { text-decoration: underline; }
+    .notif-bell-header-actions { display: flex; align-items: center; gap: 12px; }
+    .notif-bell-clear-all { color: var(--text-muted); }
     .notif-bell-list { overflow-y: auto; flex: 1; }
     .notif-bell-empty {
       padding: 28px 16px;
@@ -129,8 +131,117 @@ function injectStylesOnce() {
       word-break: break-word;
     }
     .notif-bell-item-time { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .notif-bell-item-actions { display: flex; gap: 10px; margin-top: 6px; }
+    .notif-bell-item-action {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .notif-bell-item-action:hover { color: var(--mc-china-red); }
+    .notif-bell-item-delete {
+      flex: 0 0 auto;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 2px 4px;
+    }
+    .notif-bell-item-delete:hover { color: var(--mc-china-red); }
+
+    /* Toast popups for newly-arrived notifications - independent of the
+       dropdown panel, stack in the bottom-right, auto-dismiss. Closing one
+       only removes the popup, never the underlying notification - it stays
+       in the Notification Center until explicitly deleted. */
+    .notif-toast-stack {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 10px;
+      z-index: 300;
+      pointer-events: none;
+    }
+    .notif-toast {
+      pointer-events: auto;
+      width: 320px;
+      max-width: calc(100vw - 40px);
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      padding: 14px 16px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    .notif-toast.show { opacity: 1; transform: translateY(0); }
+    .notif-toast-body { flex: 1; min-width: 0; cursor: pointer; }
+    .notif-toast-title { font-size: 13px; font-weight: 800; color: var(--text-primary); }
+    .notif-toast-text { font-size: 12px; color: var(--text-secondary); margin-top: 2px; word-break: break-word; }
+    .notif-toast-close {
+      flex: 0 0 auto;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+    }
+    .notif-toast-close:hover { color: var(--mc-china-red); }
   `;
   document.head.appendChild(style);
+}
+
+const TOAST_STACK_ID = 'notif-toast-stack';
+const TOAST_AUTO_DISMISS_MS = 6000;
+const MAX_TOASTS_PER_REFRESH = 3; // avoid a wall of popups if many arrive between polls
+
+function getOrCreateToastStack() {
+  let stack = document.getElementById(TOAST_STACK_ID);
+  if (!stack) {
+    stack = document.createElement('div');
+    stack.id = TOAST_STACK_ID;
+    stack.className = 'notif-toast-stack';
+    document.body.appendChild(stack);
+  }
+  return stack;
+}
+
+function showToastPopup(notification) {
+  const stack = getOrCreateToastStack();
+  const toast = document.createElement('div');
+  toast.className = 'notif-toast';
+  toast.innerHTML = `
+    <div class="notif-toast-body">
+      <div class="notif-toast-title">${escapeHtml(notification.title)}</div>
+      ${notification.body ? `<div class="notif-toast-text">${escapeHtml(notification.body)}</div>` : ''}
+    </div>
+    <button type="button" class="notif-toast-close" aria-label="Close">&times;</button>
+  `;
+  stack.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+
+  const dismiss = () => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 250);
+  };
+  const timer = setTimeout(dismiss, TOAST_AUTO_DISMISS_MS);
+  toast.querySelector('.notif-toast-close').addEventListener('click', (e) => {
+    e.stopPropagation();
+    clearTimeout(timer);
+    dismiss();
+  });
 }
 
 export function mountNotificationBell(containerElement) {
@@ -140,6 +251,10 @@ export function mountNotificationBell(containerElement) {
   let notifications = [];
   let unreadCount = 0;
   let open = false;
+  // null on the very first load (nothing to compare against yet - never
+  // toast-popup a page's existing backlog on load, only genuinely new
+  // arrivals discovered on a later poll).
+  let seenIds = null;
 
   containerElement.classList.add('notif-bell-root');
   containerElement.innerHTML = `
@@ -150,7 +265,10 @@ export function mountNotificationBell(containerElement) {
     <div class="notif-bell-panel" id="notif-bell-panel" hidden>
       <div class="notif-bell-panel-header">
         <span>Notifications</span>
-        <button type="button" class="notif-bell-mark-all" id="notif-mark-all-btn">Mark all read</button>
+        <div class="notif-bell-header-actions">
+          <button type="button" class="notif-bell-mark-all" id="notif-mark-all-btn">Mark all read</button>
+          <button type="button" class="notif-bell-mark-all notif-bell-clear-all" id="notif-clear-all-btn">Clear all</button>
+        </div>
       </div>
       <div class="notif-bell-list" id="notif-bell-list">
         <div class="notif-bell-empty">Loading…</div>
@@ -163,6 +281,7 @@ export function mountNotificationBell(containerElement) {
   const panel = containerElement.querySelector('#notif-bell-panel');
   const list = containerElement.querySelector('#notif-bell-list');
   const markAllBtn = containerElement.querySelector('#notif-mark-all-btn');
+  const clearAllBtn = containerElement.querySelector('#notif-clear-all-btn');
 
   function renderBadge() {
     if (unreadCount > 0) {
@@ -187,13 +306,29 @@ export function mountNotificationBell(containerElement) {
             <div class="notif-bell-item-title">${escapeHtml(n.title)}</div>
             ${n.body ? `<div class="notif-bell-item-text">${escapeHtml(n.body)}</div>` : ''}
             <div class="notif-bell-item-time">${escapeHtml(formatDate(n.createdAt))}</div>
+            <div class="notif-bell-item-actions">
+              <button type="button" class="notif-bell-item-action" data-action="toggle-read" data-id="${n.id}">${n.isRead ? 'Mark unread' : 'Mark read'}</button>
+            </div>
           </div>
+          <button type="button" class="notif-bell-item-delete" data-action="delete" data-id="${n.id}" title="Delete" aria-label="Delete notification">&times;</button>
         </div>
       `)
       .join('');
 
-    list.querySelectorAll('.notif-bell-item.unread').forEach((el) => {
-      el.addEventListener('click', () => markOneRead(el.dataset.id, el));
+    list.querySelectorAll('[data-action="toggle-read"]').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = el.dataset.id;
+        const n = notifications.find((x) => String(x.id) === String(id));
+        if (n && n.isRead) markOneUnread(id);
+        else markOneRead(id);
+      });
+    });
+    list.querySelectorAll('[data-action="delete"]').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteOne(el.dataset.id);
+      });
     });
   }
 
@@ -202,6 +337,17 @@ export function mountNotificationBell(containerElement) {
       const data = await apiFetch('/api/admin/notifications');
       notifications = data.notifications || [];
       unreadCount = data.unreadCount || 0;
+
+      if (seenIds === null) {
+        // First load on this page - just record what already exists,
+        // never toast-popup a page-load backlog.
+        seenIds = new Set(notifications.map((n) => n.id));
+      } else {
+        const freshlyArrived = notifications.filter((n) => !seenIds.has(n.id));
+        freshlyArrived.slice(0, MAX_TOASTS_PER_REFRESH).forEach((n) => showToastPopup(n));
+        notifications.forEach((n) => seenIds.add(n.id));
+      }
+
       renderBadge();
       renderList();
     } catch (err) {
@@ -212,7 +358,7 @@ export function mountNotificationBell(containerElement) {
     }
   }
 
-  async function markOneRead(id, el) {
+  async function markOneRead(id) {
     try {
       await apiFetch(`/api/admin/notifications/${encodeURIComponent(id)}/read`, { method: 'PATCH' });
       const n = notifications.find((x) => String(x.id) === String(id));
@@ -220,14 +366,38 @@ export function mountNotificationBell(containerElement) {
         n.isRead = true;
         unreadCount = Math.max(0, unreadCount - 1);
         renderBadge();
-      }
-      if (el) {
-        el.classList.remove('unread');
-        const dot = el.querySelector('.notif-bell-dot');
-        if (dot) dot.remove();
+        renderList();
       }
     } catch (err) {
       // best-effort; leave the item's visual state unchanged on failure
+    }
+  }
+
+  async function markOneUnread(id) {
+    try {
+      await apiFetch(`/api/admin/notifications/${encodeURIComponent(id)}/unread`, { method: 'PATCH' });
+      const n = notifications.find((x) => String(x.id) === String(id));
+      if (n && n.isRead) {
+        n.isRead = false;
+        unreadCount += 1;
+        renderBadge();
+        renderList();
+      }
+    } catch (err) {
+      // best-effort
+    }
+  }
+
+  async function deleteOne(id) {
+    try {
+      await apiFetch(`/api/admin/notifications/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const n = notifications.find((x) => String(x.id) === String(id));
+      if (n && !n.isRead) unreadCount = Math.max(0, unreadCount - 1);
+      notifications = notifications.filter((x) => String(x.id) !== String(id));
+      renderBadge();
+      renderList();
+    } catch (err) {
+      // best-effort; item stays visible on failure so the user can retry
     }
   }
 
@@ -235,6 +405,20 @@ export function mountNotificationBell(containerElement) {
     try {
       await apiFetch('/api/admin/notifications/mark-all-read', { method: 'POST' });
       notifications.forEach((n) => { n.isRead = true; });
+      unreadCount = 0;
+      renderBadge();
+      renderList();
+    } catch (err) {
+      // best-effort
+    }
+  }
+
+  async function clearAll() {
+    if (!notifications.length) return;
+    if (!window.confirm('Clear all notifications? This cannot be undone.')) return;
+    try {
+      await apiFetch('/api/admin/notifications', { method: 'DELETE' });
+      notifications = [];
       unreadCount = 0;
       renderBadge();
       renderList();
@@ -272,6 +456,10 @@ export function mountNotificationBell(containerElement) {
   markAllBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     markAllRead();
+  });
+  clearAllBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    clearAll();
   });
 
   loadNotifications();

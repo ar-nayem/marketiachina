@@ -127,6 +127,18 @@
 
     let mediaItems = [];
 
+    // Legacy/seeded product images are stored as a bare relative path (e.g.
+    // "assets/images/x.jpg", no leading slash) - on this page (served at
+    // /admin/media-library.html) the browser would resolve that relative to
+    // /admin/, which 404s and shows a broken image. Real uploads already
+    // start with /uploads/... and pass through unchanged. Same helper as
+    // products.html/categories.html/returns.html - keep it consistent.
+    function imgSrc(path) {
+      if (!path) return '';
+      if (/^https?:\/\//i.test(path) || /^data:/i.test(path) || path.startsWith('/')) return path;
+      return '/' + path.replace(/^\.?\//, '');
+    }
+
     function renderGrid() {
       const container = document.getElementById('media-container');
       if (!mediaItems.length) {
@@ -141,8 +153,8 @@
               <button class="delete-btn" data-id="${escapeHtml(item.id)}" title="Delete">✕</button>
               <div class="thumb-wrap">
                 ${item.type === 'video'
-                  ? `<video src="${escapeHtml(item.url)}" muted></video>`
-                  : `<img src="${escapeHtml(item.url)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'video-badge',textContent:'🖼️'}))" />`}
+                  ? `<video src="${escapeHtml(imgSrc(item.url))}" muted></video>`
+                  : `<img src="${escapeHtml(imgSrc(item.url))}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'video-badge',textContent:'🖼️'}))" />`}
               </div>
               <div class="caption" title="${escapeHtml(item.productName || '')}">${escapeHtml(item.productName || 'Unknown product')}</div>
             </div>

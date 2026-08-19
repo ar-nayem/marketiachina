@@ -38,9 +38,60 @@ export async function apiFetch(url, options = {}) {
   return data;
 }
 
+// Predefined, safe list only - never an arbitrary external font URL (keep in
+// sync with VALID_ADMIN_FONTS in server/src/routes/admin-settings.routes.js
+// and the <option> list in admin/settings.html's Typography panel). Each
+// non-default entry's googleFamily is the exact Google Fonts family name
+// used to build its on-demand <link> import.
+export const FONT_OPTIONS = [
+  { key: 'default', label: 'Default (Plus Jakarta Sans)', stack: "'Plus Jakarta Sans', 'Manrope', 'Inter', sans-serif", googleFamily: null },
+  { key: 'inter', label: 'Inter', stack: "'Inter', sans-serif", googleFamily: 'Inter:wght@300;400;500;600;700;800' },
+  { key: 'roboto', label: 'Roboto', stack: "'Roboto', sans-serif", googleFamily: 'Roboto:wght@300;400;500;700;900' },
+  { key: 'poppins', label: 'Poppins', stack: "'Poppins', sans-serif", googleFamily: 'Poppins:wght@300;400;500;600;700;800' },
+  { key: 'lato', label: 'Lato', stack: "'Lato', sans-serif", googleFamily: 'Lato:wght@300;400;700;900' },
+  { key: 'nunito', label: 'Nunito Sans', stack: "'Nunito Sans', sans-serif", googleFamily: 'Nunito+Sans:wght@300;400;600;700;800' },
+];
+
+const FONT_LINK_ID = 'admin-font-google-link';
+
+// Injects the Google Font <link> for a non-default choice (skipped for
+// 'default', which is already covered by every admin page's existing static
+// font <link> tags) and sets the --font-en variable the CSS reads. Safe to
+// call repeatedly - swaps the same link/variable each time rather than
+// stacking duplicates.
+export function applyAdminFontChoice(fontKey) {
+  const option = FONT_OPTIONS.find((f) => f.key === fontKey) || FONT_OPTIONS[0];
+
+  let link = document.getElementById(FONT_LINK_ID);
+  if (option.googleFamily) {
+    if (!link) {
+      link = document.createElement('link');
+      link.id = FONT_LINK_ID;
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    }
+    link.href = `https://fonts.googleapis.com/css2?family=${option.googleFamily}&display=swap`;
+  } else if (link) {
+    link.remove();
+  }
+
+  document.documentElement.style.setProperty('--font-en', option.stack);
+}
+
+// Fire-and-forget - never blocks the auth-gated page render on this. A
+// failed fetch (e.g. a very old session) just leaves the default font, which
+// is a fine fallback and matches "safely fall back to the existing default
+// font" from this feature's own requirements.
+function applySavedAdminFont() {
+  apiFetch('/api/admin/settings/typography')
+    .then((data) => applyAdminFontChoice(data.adminFont))
+    .catch(() => {});
+}
+
 export async function requireAdminAuth() {
   try {
     const data = await apiFetch('/api/admin/auth/me');
+    applySavedAdminFont();
     return data.admin;
   } catch (err) {
     window.location.href = '/admin/index.html';

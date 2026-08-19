@@ -15,7 +15,11 @@ function createNotification({ type, title, body = null, relatedType = null, rela
       title,
       body != null ? body : null,
       relatedType != null ? relatedType : null,
-      relatedId != null ? relatedId : null
+      // related_id is a TEXT column, but callers often pass a raw
+      // lastInsertRowid (a JS number) - node:sqlite binds plain numbers as
+      // SQLite REAL, which a TEXT-affinity column then stores as "2.0"
+      // instead of "2". Stringify explicitly so it's always a clean id.
+      relatedId != null ? String(relatedId) : null
     );
   } catch (err) {
     console.error('[notify] failed to record notification:', err);

@@ -638,7 +638,12 @@
     function fillForm(p) {
       const f = id => document.getElementById(id);
       f('f-id').value = p ? p.id : '';
-      f('f-category').value = p ? (p.category || '') : '';
+      // For a new product (p is null), leave whatever populateFormCategoryOptions()
+      // already auto-selected (the browser defaults a freshly-populated <select>
+      // to its first option) - explicitly blanking it here left the field looking
+      // populated but actually unselected, so Save always failed with a
+      // confusing "category is required" error even though a category was visibly showing.
+      if (p) f('f-category').value = p.category || '';
       f('f-status').value = p ? (p.status || 'published') : 'published';
       currentMedia = (p && Array.isArray(p.media)) ? [...p.media] : [];
       renderMediaStrip();

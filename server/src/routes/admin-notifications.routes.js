@@ -50,10 +50,38 @@ router.patch('/:id/read', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// PATCH /:id/unread - mark a single notification unread (undo a mis-click).
+router.patch('/:id/unread', requireAdmin, (req, res) => {
+  const existing = db.prepare(`SELECT id FROM notifications WHERE id = ?`).get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Notification not found.' });
+
+  db.prepare(`UPDATE notifications SET is_read = 0 WHERE id = ?`).run(req.params.id);
+  res.json({ ok: true });
+});
+
 // POST /mark-all-read - mark every currently-unread notification read.
 router.post('/mark-all-read', requireAdmin, (req, res) => {
   const result = db.prepare(`UPDATE notifications SET is_read = 1 WHERE is_read = 0`).run();
   res.json({ ok: true, updatedCount: result.changes });
+});
+
+// DELETE /:id - remove a single notification. Deleting one must never touch
+// any other row - a plain single-row DELETE by primary key already
+// guarantees that, no extra guard needed.
+router.delete('/:id', requireAdmin, (req, res) => {
+  const existing = db.prepare(`SELECT id FROM notifications WHERE id = ?`).get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Notification not found.' });
+
+  db.prepare(`DELETE FROM notifications WHERE id = ?`).run(req.params.id);
+  res.json({ ok: true });
+});
+
+// DELETE / - clear every notification. The confirmation step lives in the
+// UI (this is a destructive, no-undo action) - the API itself just does
+// exactly what it's asked once called.
+router.delete('/', requireAdmin, (req, res) => {
+  const result = db.prepare(`DELETE FROM notifications`).run();
+  res.json({ ok: true, deletedCount: result.changes });
 });
 
 module.exports = router;

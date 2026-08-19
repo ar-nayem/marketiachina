@@ -122,7 +122,10 @@ html[lang="zh"] body,
 
 html[lang="en"] body,
 .font-english {
-  font-family: 'Plus Jakarta Sans', 'Manrope', 'Inter', sans-serif !important;
+  /* --font-en defaults to the exact stack this rule always had; the admin
+     panel's Typography setting overrides it via an inline style property on
+     <html>, the public storefront never sets it so nothing changes there. */
+  font-family: var(--font-en, 'Plus Jakarta Sans', 'Manrope', 'Inter', sans-serif) !important;
 }
 
 /* Global scrollbar */

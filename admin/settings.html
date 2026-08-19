@@ -27,7 +27,9 @@
       renderSidebar,
       wireLogout,
       escapeHtml,
-      formatDate
+      formatDate,
+      FONT_OPTIONS,
+      applyAdminFontChoice
     } from '/admin/js/adminShell.js';
 
     const RATE_FIELDS = [
@@ -265,6 +267,8 @@
         document.getElementById('whatsappNumber').value = data.whatsappNumber || '';
         document.getElementById('contactEmail').value = data.contactEmail || '';
         renderShippingRates(data.shippingRates);
+        document.getElementById('admin-font-select').value = data.adminFont || 'default';
+        handleFontPreview();
       } catch (err) {
         setStatus(`Failed to load settings: ${err.message}`, true);
         document.getElementById('shipping-rates-display').innerHTML = `<div class="admin-table-empty">Failed to load shipping rates.</div>`;
@@ -383,6 +387,33 @@
                   </div>
                 </div>
               </div>
+
+              <div class="admin-panel" style="max-width:640px;margin-top:24px;">
+                <div class="admin-panel-header">
+                  <h2>Typography</h2>
+                </div>
+                <div style="padding:20px;display:flex;flex-direction:column;gap:16px;">
+                  <div>
+                    <label class="form-label" for="admin-font-select">English Font</label>
+                    <select class="form-input" id="admin-font-select">
+                      ${FONT_OPTIONS.map((f) => `<option value="${escapeHtml(f.key)}">${escapeHtml(f.label)}</option>`).join('')}
+                    </select>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Applies to the English admin panel interface only - Bangla and Chinese pages are unaffected.</div>
+                  </div>
+                  <div>
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin-bottom:8px;">Preview</div>
+                    <div id="admin-font-preview" style="border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:20px;background:var(--bg-tertiary);">
+                      <div style="font-size:20px;font-weight:800;color:var(--text-primary);">Marketia China</div>
+                      <div style="font-size:13px;color:var(--text-secondary);margin-top:4px;">Trusted Products &bull; Direct China Sourcing</div>
+                      <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">Manage Products &bull; Orders &bull; Customers</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:14px;">
+                    <button type="button" class="btn-primary" id="save-font-btn">Save Font</button>
+                    <span id="font-save-status" style="font-size:13px;color:var(--text-muted);"></span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -392,9 +423,57 @@
       document.getElementById('settings-form').addEventListener('submit', handleSubmit);
       document.getElementById('change-password-form').addEventListener('submit', handleChangePassword);
       document.getElementById('logout-other-devices-btn').addEventListener('click', handleLogoutOtherDevices);
+      document.getElementById('admin-font-select').addEventListener('change', handleFontPreview);
+      document.getElementById('save-font-btn').addEventListener('click', handleSaveFont);
 
       await loadSettings();
       await loadSessions();
+    }
+
+    // Preview only touches the small preview box's own inline style - the
+    // real page-wide font (and every other admin page) only changes once
+    // Save Font is clicked, per this feature's explicit Preview -> Apply
+    // requirement.
+    function handleFontPreview() {
+      const key = document.getElementById('admin-font-select').value;
+      const option = FONT_OPTIONS.find((f) => f.key === key) || FONT_OPTIONS[0];
+      const preview = document.getElementById('admin-font-preview');
+
+      if (option.googleFamily) {
+        let link = document.getElementById('admin-font-preview-google-link');
+        if (!link) {
+          link = document.createElement('link');
+          link.id = 'admin-font-preview-google-link';
+          link.rel = 'stylesheet';
+          document.head.appendChild(link);
+        }
+        link.href = `https://fonts.googleapis.com/css2?family=${option.googleFamily}&display=swap`;
+      }
+      preview.style.fontFamily = option.stack;
+    }
+
+    async function handleSaveFont() {
+      const btn = document.getElementById('save-font-btn');
+      const status = document.getElementById('font-save-status');
+      const key = document.getElementById('admin-font-select').value;
+
+      btn.disabled = true;
+      status.style.color = 'var(--text-muted)';
+      status.textContent = 'Saving…';
+      try {
+        await apiFetch('/api/admin/settings', {
+          method: 'PUT',
+          body: JSON.stringify({ adminFont: key })
+        });
+        applyAdminFontChoice(key);
+        status.style.color = 'var(--text-muted)';
+        status.textContent = 'Font updated successfully.';
+      } catch (err) {
+        status.style.color = 'var(--mc-china-red)';
+        status.textContent = `Failed to save: ${err.message}`;
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     init();
