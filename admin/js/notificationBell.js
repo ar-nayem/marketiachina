@@ -103,14 +103,26 @@ function injectStylesOnce() {
     .notif-bell-close {
       background: none;
       border: none;
-      padding: 0;
-      margin: 0 0 0 2px;
+      margin: 0 -6px 0 2px;
+      padding: 8px;
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       font-size: 20px;
       line-height: 1;
       color: var(--text-muted);
       cursor: pointer;
+      flex: 0 0 auto;
     }
     .notif-bell-close:hover { color: var(--mc-china-red); }
+    .notif-bell-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.25);
+      z-index: 99;
+    }
     .notif-bell-list { overflow-y: auto; flex: 1; }
     .notif-bell-empty {
       padding: 28px 16px;
@@ -306,6 +318,15 @@ export function mountNotificationBell(containerElement) {
   // animation - a transformed ancestor becomes the containing block for any
   // position:fixed descendant, which would otherwise silently anchor this
   // panel to the sidebar's box instead of the real viewport).
+  //
+  // A full-screen backdrop sits behind the panel while it's open - tapping
+  // ANYWHERE outside the panel closes it. This is deliberately more robust
+  // than relying only on the small (x) button: a full-screen tap target
+  // can't be missed the way a 20px icon can be, especially on a touchscreen.
+  const backdrop = document.createElement('div');
+  backdrop.className = 'notif-bell-backdrop';
+  backdrop.hidden = true;
+  document.body.appendChild(backdrop);
   document.body.appendChild(panel);
 
   function positionPanel() {
@@ -480,6 +501,7 @@ export function mountNotificationBell(containerElement) {
     open = true;
     positionPanel();
     panel.hidden = false;
+    backdrop.hidden = false;
     btn.setAttribute('aria-expanded', 'true');
     document.addEventListener('click', onOutsideClick, true);
     document.addEventListener('keydown', onKeydown, true);
@@ -489,6 +511,7 @@ export function mountNotificationBell(containerElement) {
   function closePanel() {
     open = false;
     panel.hidden = true;
+    backdrop.hidden = true;
     btn.setAttribute('aria-expanded', 'false');
     document.removeEventListener('click', onOutsideClick, true);
     document.removeEventListener('keydown', onKeydown, true);
@@ -513,6 +536,7 @@ export function mountNotificationBell(containerElement) {
     e.stopPropagation();
     closePanel();
   });
+  backdrop.addEventListener('click', closePanel);
 
   loadNotifications();
 
@@ -534,6 +558,7 @@ export function mountNotificationBell(containerElement) {
       window.removeEventListener('resize', onReposition);
       window.removeEventListener('scroll', onReposition, true);
       panel.remove();
+      backdrop.remove();
     },
   };
 }
