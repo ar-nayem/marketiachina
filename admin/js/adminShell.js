@@ -99,16 +99,96 @@ export async function requireAdminAuth() {
   }
 }
 
+const MOBILE_NAV_STYLE_ID = 'admin-mobile-nav-styles';
+
+// admin.css hides .admin-sidebar off-canvas below 860px (transform:
+// translateX(-100%), a slide-in drawer) for exactly this narrow-viewport
+// case, but no button anywhere in this codebase ever added the `.open`
+// class back - there was no way to open it at all on a phone. This injects
+// a small hamburger button + dimming backdrop (same tap-anywhere-outside-
+// to-close pattern as the notification bell) that toggles it.
+function injectMobileNavStyles() {
+  if (document.getElementById(MOBILE_NAV_STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = MOBILE_NAV_STYLE_ID;
+  style.textContent = `
+    .admin-mobile-menu-btn {
+      display: none;
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 60;
+      width: 42px;
+      height: 42px;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: var(--shadow-md);
+    }
+    .admin-mobile-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      z-index: 49;
+    }
+    .admin-mobile-backdrop.open { display: block; }
+    @media (max-width: 860px) {
+      .admin-mobile-menu-btn { display: flex; }
+      .admin-topbar { padding-left: 66px; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function wireMobileNav() {
+  const menuBtn = document.getElementById('admin-mobile-menu-btn');
+  const backdrop = document.getElementById('admin-mobile-backdrop');
+  const sidebar = document.getElementById('admin-sidebar');
+  if (!menuBtn || !backdrop || !sidebar || menuBtn.dataset.wired) return;
+  menuBtn.dataset.wired = '1';
+
+  function openDrawer() {
+    sidebar.classList.add('open');
+    backdrop.classList.add('open');
+  }
+  function closeDrawer() {
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('open');
+  }
+
+  menuBtn.addEventListener('click', () => {
+    if (sidebar.classList.contains('open')) closeDrawer();
+    else openDrawer();
+  });
+  backdrop.addEventListener('click', closeDrawer);
+  // Navigating to a new page reloads the whole document in this app anyway,
+  // but closing on nav-link tap avoids a flash of the drawer still open
+  // mid-navigation.
+  sidebar.querySelectorAll('.admin-nav-link').forEach((link) => {
+    link.addEventListener('click', closeDrawer);
+  });
+}
+
 export function renderSidebar(activeKey, admin) {
-  // Mount the notification bell into its container once this HTML has
-  // actually been inserted into the DOM by the caller. Every page calls
-  // renderSidebar() and inserts its return value synchronously right after
-  // (either via insertAdjacentHTML or interpolated into an innerHTML
-  // assignment) - queueMicrotask fires only after that synchronous work
-  // finishes, so the container is guaranteed to exist by then. A dynamic
-  // import (not a static top-level one) avoids a circular module
-  // dependency, since notificationBell.js itself imports from this file.
+  injectMobileNavStyles();
+
+  // Mount the notification bell into its container, and wire the mobile
+  // menu toggle, once this HTML has actually been inserted into the DOM by
+  // the caller. Every page calls renderSidebar() and inserts its return
+  // value synchronously right after (either via insertAdjacentHTML or
+  // interpolated into an innerHTML assignment) - queueMicrotask fires only
+  // after that synchronous work finishes, so both are guaranteed to exist
+  // by then. A dynamic import (not a static top-level one) for the bell
+  // avoids a circular module dependency, since notificationBell.js itself
+  // imports from this file.
   queueMicrotask(() => {
+    wireMobileNav();
     const el = document.getElementById('notification-bell-root');
     if (el && !el.dataset.mounted) {
       el.dataset.mounted = '1';
@@ -117,6 +197,8 @@ export function renderSidebar(activeKey, admin) {
   });
 
   return `
+    <button type="button" class="admin-mobile-menu-btn" id="admin-mobile-menu-btn" aria-label="Open menu">&#9776;</button>
+    <div class="admin-mobile-backdrop" id="admin-mobile-backdrop"></div>
     <aside class="admin-sidebar" id="admin-sidebar">
       <div class="admin-sidebar-brand">
         <div class="mark">MC</div>
