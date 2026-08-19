@@ -57,11 +57,16 @@ function injectStylesOnce() {
       box-shadow: 0 0 0 2px var(--bg-card);
     }
     .notif-bell-panel {
-      position: absolute;
-      top: calc(100% + 10px);
-      right: 0;
-      width: 340px;
-      max-width: calc(100vw - 32px);
+      /* position: fixed and reparented to document.body at mount time (see
+         mountNotificationBell) - top/left/width are set from JS via
+         positionPanel(), computed from the bell button's real screen
+         coordinates. This deliberately does NOT rely on CSS anchoring
+         (position: absolute relative to a nearby ancestor), because
+         .admin-sidebar has its own transform property on mobile (a slide-in
+         drawer) - a transformed ancestor becomes the containing block for
+         any position:fixed descendant too, which silently breaks
+         viewport-relative positioning for anything left nested inside it. */
+      position: fixed;
       max-height: 420px;
       display: flex;
       flex-direction: column;
@@ -95,6 +100,17 @@ function injectStylesOnce() {
     .notif-bell-mark-all:hover { text-decoration: underline; }
     .notif-bell-header-actions { display: flex; align-items: center; gap: 12px; }
     .notif-bell-clear-all { color: var(--text-muted); }
+    .notif-bell-close {
+      background: none;
+      border: none;
+      padding: 0;
+      margin: 0 0 0 2px;
+      font-size: 20px;
+      line-height: 1;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .notif-bell-close:hover { color: var(--mc-china-red); }
     .notif-bell-list { overflow-y: auto; flex: 1; }
     .notif-bell-empty {
       padding: 28px 16px;
@@ -268,6 +284,7 @@ export function mountNotificationBell(containerElement) {
         <div class="notif-bell-header-actions">
           <button type="button" class="notif-bell-mark-all" id="notif-mark-all-btn">Mark all read</button>
           <button type="button" class="notif-bell-mark-all notif-bell-clear-all" id="notif-clear-all-btn">Clear all</button>
+          <button type="button" class="notif-bell-close" id="notif-bell-close-btn" aria-label="Close notifications">&times;</button>
         </div>
       </div>
       <div class="notif-bell-list" id="notif-bell-list">
@@ -282,6 +299,25 @@ export function mountNotificationBell(containerElement) {
   const list = containerElement.querySelector('#notif-bell-list');
   const markAllBtn = containerElement.querySelector('#notif-mark-all-btn');
   const clearAllBtn = containerElement.querySelector('#notif-clear-all-btn');
+  const closeBtn = containerElement.querySelector('#notif-bell-close-btn');
+
+  // Reparent the panel to <body> so it is never nested inside .admin-sidebar
+  // (which has its own `transform` on mobile for its slide-in-drawer
+  // animation - a transformed ancestor becomes the containing block for any
+  // position:fixed descendant, which would otherwise silently anchor this
+  // panel to the sidebar's box instead of the real viewport).
+  document.body.appendChild(panel);
+
+  function positionPanel() {
+    const rect = btn.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const width = Math.min(340, viewportWidth - 24);
+    panel.style.width = width + 'px';
+    let left = rect.right - width;
+    left = Math.max(12, Math.min(left, viewportWidth - width - 12));
+    panel.style.left = left + 'px';
+    panel.style.top = (rect.bottom + 10) + 'px';
+  }
 
   function renderBadge() {
     if (unreadCount > 0) {
@@ -428,17 +464,27 @@ export function mountNotificationBell(containerElement) {
   }
 
   function onOutsideClick(e) {
-    if (!containerElement.contains(e.target)) closePanel();
+    // The panel lives in <body> now (see the reparent above), not inside
+    // containerElement, so both must be checked - otherwise every click
+    // inside the panel itself (Mark all read, a notification row, etc.)
+    // would register as "outside" and instantly close it.
+    if (!containerElement.contains(e.target) && !panel.contains(e.target)) closePanel();
   }
   function onKeydown(e) {
     if (e.key === 'Escape') closePanel();
   }
+  function onReposition() {
+    if (open) positionPanel();
+  }
   function openPanel() {
     open = true;
+    positionPanel();
     panel.hidden = false;
     btn.setAttribute('aria-expanded', 'true');
     document.addEventListener('click', onOutsideClick, true);
     document.addEventListener('keydown', onKeydown, true);
+    window.addEventListener('resize', onReposition);
+    window.addEventListener('scroll', onReposition, true);
   }
   function closePanel() {
     open = false;
@@ -446,6 +492,8 @@ export function mountNotificationBell(containerElement) {
     btn.setAttribute('aria-expanded', 'false');
     document.removeEventListener('click', onOutsideClick, true);
     document.removeEventListener('keydown', onKeydown, true);
+    window.removeEventListener('resize', onReposition);
+    window.removeEventListener('scroll', onReposition, true);
   }
 
   btn.addEventListener('click', (e) => {
@@ -460,6 +508,10 @@ export function mountNotificationBell(containerElement) {
   clearAllBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     clearAll();
+  });
+  closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closePanel();
   });
 
   loadNotifications();
@@ -479,6 +531,9 @@ export function mountNotificationBell(containerElement) {
       clearInterval(intervalId);
       document.removeEventListener('click', onOutsideClick, true);
       document.removeEventListener('keydown', onKeydown, true);
+      window.removeEventListener('resize', onReposition);
+      window.removeEventListener('scroll', onReposition, true);
+      panel.remove();
     },
   };
 }
