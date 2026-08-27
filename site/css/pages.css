@@ -438,6 +438,15 @@
 .order-status-delivered { background: rgba(16, 163, 74, 0.14); color: #10A34A; }
 .order-status-cancelled { background: var(--mc-china-red-light); color: var(--mc-china-red); }
 
+/* Payment verification status (separate from fulfillment status above). */
+.order-status-pending_payment { background: rgba(230, 168, 0, 0.14); color: #B07E00; }
+.order-status-payment_submitted { background: rgba(230, 168, 0, 0.14); color: #B07E00; }
+.order-status-under_verification { background: rgba(230, 168, 0, 0.14); color: #B07E00; }
+.order-status-more_info_requested { background: var(--mc-china-red-light); color: var(--mc-china-red); }
+.order-status-verified { background: rgba(16, 163, 74, 0.14); color: #10A34A; }
+.order-status-rejected { background: var(--mc-china-red-light); color: var(--mc-china-red); }
+.order-status-expired { background: var(--mc-china-red-light); color: var(--mc-china-red); }
+
 .order-card-items {
   font-size: 0.85rem;
   color: var(--text-secondary);

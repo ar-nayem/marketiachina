@@ -18,6 +18,7 @@ function toCamelOrder(o) {
     customerEmail: o.customer_email,
     shippingAddress: o.shipping_address,
     paymentMethod: o.payment_method,
+    paymentStatus: o.payment_status,
     shippingMethod: o.shipping_method,
     subtotalBdt: o.subtotal_bdt,
     discountBdt: o.discount_bdt,
@@ -59,6 +60,7 @@ router.get('/', requirePermission('orders.view'), (req, res) => {
       customerEmail: o.customer_email,
       totalBdt: o.total_bdt,
       status: o.status,
+      paymentStatus: o.payment_status,
       createdAt: o.created_at,
       itemCount: o.item_count,
     })),
@@ -104,9 +106,21 @@ router.patch('/:id', requirePermission('orders.update_status'), (req, res) => {
   // Atomic: the status change and its timeline entry must both land together,
   // or neither does - a crash between the two must never leave the order's
   // live status disagreeing with its own history.
+  const PAYMENT_STATUSES_CANCELLABLE = ['pending_payment', 'payment_submitted', 'under_verification', 'more_info_requested'];
+
   db.exec('BEGIN');
   try {
     db.prepare(`UPDATE orders SET status = ? WHERE id = ?`).run(status, req.params.id);
+
+    // Cancelling the order cancels any payment still awaiting verification
+    // too - an already-verified or already-rejected payment_status is left
+    // as-is (that history stays accurate regardless of fulfillment outcome).
+    if (status === 'cancelled') {
+      const current = db.prepare(`SELECT payment_status FROM orders WHERE id = ?`).get(req.params.id);
+      if (PAYMENT_STATUSES_CANCELLABLE.includes(current.payment_status)) {
+        db.prepare(`UPDATE orders SET payment_status = 'cancelled' WHERE id = ?`).run(req.params.id);
+      }
+    }
 
     db.prepare(
       `INSERT INTO order_status_history (order_id, status, note, changed_by_admin_id, changed_by_admin_name)

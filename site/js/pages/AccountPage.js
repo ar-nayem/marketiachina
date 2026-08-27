@@ -140,8 +140,14 @@ export class AccountPage {
       ? o.createdAt
       : parsedDate.toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' });
     const statusLabel = t.auth.accountStatus[o.status] || o.status;
+    const paymentStatusLabel = t.auth.paymentStatus[o.paymentStatus] || o.paymentStatus;
     const totalQuantity = o.items.reduce((sum, item) => sum + item.quantity, 0);
     const itemsSummary = o.items.map((item) => `${item.name} × ${item.quantity}`).join(', ');
+
+    // Actionable = the buyer can still do something about it (submit or
+    // resubmit); final states (verified/cancelled/expired) just show the badge.
+    const actionable = ['pending_payment', 'rejected', 'more_info_requested'].includes(o.paymentStatus);
+    const viewable = actionable || ['payment_submitted', 'under_verification'].includes(o.paymentStatus);
 
     return `
       <div class="order-card">
@@ -150,12 +156,16 @@ export class AccountPage {
             <div class="order-card-number">${o.orderNumber}</div>
             <div class="order-card-date">${t.auth.accountOrderDate} ${dateStr}</div>
           </div>
-          <span class="order-status-badge order-status-${o.status}">${statusLabel}</span>
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+            <span class="order-status-badge order-status-${o.status}">${statusLabel}</span>
+            <span class="order-status-badge order-status-${o.paymentStatus}">${paymentStatusLabel}</span>
+          </div>
         </div>
         <div class="order-card-items">${itemsSummary} — ${totalQuantity} ${t.auth.accountOrderItems}</div>
         <div class="order-card-bottom">
           <div class="order-card-total">${t.auth.accountOrderTotal}: ৳${o.totalBDT.toLocaleString()}</div>
-          <div style="display:flex;gap:8px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${viewable ? `<a href="/order-payment.html?orderId=${o.id}" class="btn-secondary order-card-invoice-link">${actionable ? t.auth.accountCompletePayment : t.auth.accountViewPaymentStatus}</a>` : ''}
             <a href="${o.invoiceUrl}" target="_blank" rel="noopener" class="btn-secondary order-card-invoice-link">${t.auth.accountViewInvoice}</a>
             <a href="${o.invoicePdfUrl}" target="_blank" rel="noopener" class="btn-secondary order-card-invoice-link">${t.auth.accountDownloadPdf}</a>
           </div>

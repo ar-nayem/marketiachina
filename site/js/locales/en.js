@@ -219,10 +219,7 @@ export const en = {
     address: "Complete Address (Shop/House, Road, Thana, District)",
     city: "City / Division",
     paymentMethod: "Select Payment Method",
-    bkash: "bKash Digital Payment",
-    nagad: "Nagad Wallet",
-    bank: "Bank Wire / Commercial LC",
-    cod: "Cash on Delivery (with partial booking)",
+    noActiveMethods: "No payment methods are currently available. Please contact support.",
     orderSummary: "Order Summary",
     placeOrder: "Confirm Order (Total: ",
     successTitle: "🎉 Order Successfully Placed!",
@@ -235,7 +232,37 @@ export const en = {
     gateLoginBtn: "Log In / Sign Up",
     gateGuestBtn: "Continue as Guest",
     gateGuestNote: "We'll only need your email and phone number.",
-    gateBack: "Back"
+    gateBack: "Back",
+    payInstructionsTitle: "Complete Your Payment",
+    payInstructionsSubtitle: "Scan the QR code or use the account details below, then confirm your payment.",
+    scanQrLabel: "Scan to Pay",
+    accountNameLabel: "Account Name",
+    accountNumberLabel: "Account Number / ID",
+    accountTypeLabel: "Account Type",
+    bankNameLabel: "Bank Name",
+    branchNameLabel: "Branch Name",
+    routingNumberLabel: "Routing Number",
+    swiftCodeLabel: "SWIFT Code",
+    instructionsLabel: "Instructions",
+    copyBtn: "Copy",
+    iHaveCompletedPayment: "I Have Completed Payment",
+    payLaterLink: "I'll complete payment later",
+    confirmFormTitle: "Payment Confirmation",
+    confirmFormSubtitle: "Enter your payment details so we can verify it.",
+    transactionReferenceLabel: "Transaction ID / Reference Number",
+    senderNameLabel: "Sender Name",
+    senderIdentifierLabel: "Sender Phone Number / Account Identifier",
+    lastDigitsLabel: "Last 5-6 Digits Used",
+    paidAtLabel: "Payment Date & Time",
+    proofLabel: "Payment Screenshot / Proof",
+    proofOptional: "(optional)",
+    noteLabel: "Additional Note",
+    confirmWarning: "Please ensure that all payment information is correct. Submitting incorrect information may delay payment verification.",
+    submitConfirmationBtn: "Submit Payment Confirmation",
+    backToInstructions: "Back",
+    confirmSuccessTitle: "🎉 Order Placed — Payment Awaiting Verification",
+    confirmSuccessDesc: "Your payment information has been submitted successfully and is awaiting verification. We'll email you once it's confirmed.",
+    confirmPendingBadge: "Awaiting Verification"
   },
 
   sourcingModal: {
@@ -322,7 +349,19 @@ export const en = {
       shipped: "Shipped",
       delivered: "Delivered",
       cancelled: "Cancelled"
-    }
+    },
+    paymentStatus: {
+      pending_payment: "Payment Pending",
+      payment_submitted: "Payment Submitted",
+      under_verification: "Under Verification",
+      more_info_requested: "More Info Needed",
+      verified: "Verified / Paid",
+      rejected: "Payment Rejected",
+      cancelled: "Cancelled",
+      expired: "Payment Expired"
+    },
+    accountCompletePayment: "Complete Payment",
+    accountViewPaymentStatus: "View Payment Status"
   },
 
   reviews: {

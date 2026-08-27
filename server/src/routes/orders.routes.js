@@ -1,8 +1,8 @@
 const express = require('express');
 const crypto = require('node:crypto');
 const { db } = require('../db');
-const { resolveSession } = require('../lib/session');
 const { requireAuth, attachCustomerIfPresent } = require('../middleware/requireAuth');
+const { isAuthorizedForOrder } = require('../lib/orderAuth');
 const { sendMail } = require('../lib/mailer');
 const { renderInvoiceHtml } = require('../lib/invoice');
 const { renderInvoiceEmailHtml } = require('../lib/invoice-email');
@@ -11,8 +11,30 @@ const { notifyTelegram } = require('../lib/telegram');
 
 const router = express.Router();
 
-const PAYMENT_METHODS = ['bkash', 'nagad', 'bank', 'cod'];
 const SHIPPING_METHODS = ['air', 'sea'];
+
+function getActivePaymentMethodKeys() {
+  return db.prepare(`SELECT key FROM payment_methods WHERE status = 'active' ORDER BY sort_order ASC`).all().map((r) => r.key);
+}
+
+// Orders past this point in the payment-verification flow are effectively
+// resolved - a stale payment_expires_at should no longer flip their display
+// to "expired".
+const PAYMENT_STATUS_EXPIRABLE = new Set(['pending_payment', 'payment_submitted', 'under_verification', 'more_info_requested']);
+
+// Computed, never stored: an order "expires" the instant payment_expires_at
+// passes while it's still awaiting verification - no cron needed, this is
+// evaluated fresh on every read.
+function derivePaymentStatus(order) {
+  if (
+    order.payment_expires_at &&
+    PAYMENT_STATUS_EXPIRABLE.has(order.payment_status) &&
+    new Date(order.payment_expires_at.replace(' ', 'T') + 'Z').getTime() < Date.now()
+  ) {
+    return 'expired';
+  }
+  return order.payment_status;
+}
 
 // Fallback only — site_settings.shipping_rates is always present after seed.js
 // runs, this just guards against a corrupted/missing row.
@@ -87,8 +109,9 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
   if (!name || !phone || !isValidEmail(email) || !address) {
     return res.status(400).json({ error: 'Name, phone, a valid email, and address are required.' });
   }
-  if (!PAYMENT_METHODS.includes(paymentMethod)) {
-    return res.status(400).json({ error: `Payment method must be one of: ${PAYMENT_METHODS.join(', ')}.` });
+  const activePaymentMethods = getActivePaymentMethodKeys();
+  if (!activePaymentMethods.includes(paymentMethod)) {
+    return res.status(400).json({ error: `Payment method must be one of: ${activePaymentMethods.join(', ')}.` });
   }
   if (!SHIPPING_METHODS.includes(shippingMethod)) {
     return res.status(400).json({ error: `Shipping method must be one of: ${SHIPPING_METHODS.join(', ')}.` });
@@ -139,12 +162,19 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
   const accessToken = crypto.randomBytes(24).toString('hex');
   const customerId = req.customer ? req.customer.id : null;
 
+  // Optional, Owner-configured payment deadline (hours from now). Blank/0 -
+  // the default - means orders never expire.
+  const paymentExpiryHours = Number(getSettingValue('payment_expiry_hours', 0)) || 0;
+  const paymentExpiresAt = paymentExpiryHours > 0
+    ? new Date(Date.now() + paymentExpiryHours * 3600 * 1000).toISOString().slice(0, 19).replace('T', ' ')
+    : null;
+
   const insertOrderStmt = db.prepare(`
     INSERT INTO orders (
       order_number, access_token, customer_id, customer_name, customer_phone, customer_email,
       shipping_address, payment_method, shipping_method, subtotal_bdt, discount_bdt, shipping_fee_bdt,
-      total_bdt, promo_code, status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+      total_bdt, promo_code, status, payment_status, payment_expires_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending_payment', ?)
   `);
 
   let order = null;
@@ -155,7 +185,7 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
       const result = insertOrderStmt.run(
         orderNumber, accessToken, customerId, name, phone, email, address,
         paymentMethod, shippingMethod, subtotalBDT, discountBDT, shippingFeeBDT, totalBDT,
-        promoCode || null
+        promoCode || null, paymentExpiresAt
       );
       order = db.prepare(`SELECT * FROM orders WHERE id = ?`).get(result.lastInsertRowid);
       break;
@@ -233,8 +263,11 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappText}`;
 
   res.status(201).json({
+    orderId: order.id,
     orderNumber: order.order_number,
     accessToken: order.access_token,
+    paymentMethod: order.payment_method,
+    totalBdt: order.total_bdt,
     invoiceUrl: `/api/orders/${order.id}/invoice?t=${order.access_token}`,
     invoicePdfUrl: `/api/orders/${order.id}/invoice.pdf?t=${order.access_token}`,
     whatsappUrl,
@@ -254,6 +287,7 @@ router.get('/', requireAuth, (req, res) => {
     createdAt: o.created_at,
     shippingMethod: o.shipping_method,
     paymentMethod: o.payment_method,
+    paymentStatus: derivePaymentStatus(o),
     subtotalBDT: o.subtotal_bdt,
     shippingFeeBDT: o.shipping_fee_bdt,
     totalBDT: o.total_bdt,
@@ -270,24 +304,6 @@ router.get('/', requireAuth, (req, res) => {
 
   res.json({ orders: result });
 });
-
-function isAuthorizedForOrder(req, order) {
-  const token = req.query.t;
-  if (token && order.access_token === token) return true;
-
-  const adminSession = resolveSession(req, 'admin');
-  if (adminSession) {
-    const admin = db.prepare(`SELECT id FROM admin_users WHERE id = ?`).get(adminSession.subjectId);
-    if (admin) return true;
-  }
-
-  const customerSession = resolveSession(req, 'customer');
-  if (customerSession && order.customer_id != null && order.customer_id === customerSession.subjectId) {
-    return true;
-  }
-
-  return false;
-}
 
 router.get('/:id/invoice', (req, res) => {
   const orderId = Number(req.params.id);
@@ -380,17 +396,26 @@ router.get('/track', (req, res) => {
     .prepare(`SELECT courier, tracking_number, courier_status FROM shipments WHERE order_id = ? ORDER BY created_at DESC, id DESC LIMIT 1`)
     .get(order.id);
 
+  const latestSubmission = db
+    .prepare(`SELECT id, status, rejection_reason, created_at FROM payment_submissions WHERE order_id = ? ORDER BY created_at DESC, id DESC LIMIT 1`)
+    .get(order.id);
+
   res.json({
+    orderId: order.id,
     orderNumber: order.order_number,
     status: order.status,
     createdAt: order.created_at,
     shippingMethod: order.shipping_method,
     paymentMethod: order.payment_method,
+    paymentStatus: derivePaymentStatus(order),
     totalBdt: order.total_bdt,
     items: items.map((i) => ({ productName: i.product_name_snapshot, quantity: i.quantity })),
     history: history.map((h) => ({ status: h.status, createdAt: h.created_at })),
     shipment: shipmentRow
       ? { courier: shipmentRow.courier, trackingNumber: shipmentRow.tracking_number, courierStatus: shipmentRow.courier_status }
+      : null,
+    latestPaymentSubmission: latestSubmission
+      ? { id: latestSubmission.id, status: latestSubmission.status, rejectionReason: latestSubmission.rejection_reason, createdAt: latestSubmission.created_at }
       : null,
   });
 });

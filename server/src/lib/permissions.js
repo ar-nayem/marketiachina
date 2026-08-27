@@ -18,6 +18,8 @@ const PERMISSIONS = [
   { key: 'roles.manage', label: 'Manage roles & permissions', category: 'Users' },
   { key: 'settings.manage', label: 'Manage site settings', category: 'Settings' },
   { key: 'activity_logs.view', label: 'View activity logs', category: 'System' },
+  { key: 'payments.manage_settings', label: 'Manage payment methods, QR codes & account details', category: 'Payments' },
+  { key: 'payments.verify', label: 'View & verify payment submissions', category: 'Payments' },
 ];
 
 const DEFAULT_ROLE_PERMISSIONS = {

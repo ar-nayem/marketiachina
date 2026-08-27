@@ -20,6 +20,7 @@ class SettingsStateManager {
     this.logoUrl = '';
     this.whatsappNumber = '8801312965171';
     this.shippingRates = DEFAULT_RATES;
+    this.paymentProofRequired = false;
     this.listeners = [];
     this.ready = this.load();
   }
@@ -34,6 +35,7 @@ class SettingsStateManager {
         this.businessName = settingsRes.businessName || this.businessName;
         this.logoUrl = settingsRes.logoUrl || this.logoUrl;
         this.whatsappNumber = settingsRes.whatsappNumber || this.whatsappNumber;
+        this.paymentProofRequired = !!settingsRes.paymentProofRequired;
       }
       if (ratesRes) this.shippingRates = ratesRes;
     } catch (err) {

@@ -219,10 +219,7 @@ export const zh = {
     address: "详细收货地址 (门牌、街道、区县、行政区)",
     city: "城市 / 行政省",
     paymentMethod: "支付方式",
-    bkash: "bKash 移动钱包",
-    nagad: "Nagad 支付",
-    bank: "银行电汇 / 信用证 LC",
-    cod: "货到付款 (需预付定金)",
+    noActiveMethods: "目前没有可用的支付方式，请联系客服。",
     orderSummary: "订单清单摘要",
     placeOrder: "确认提交订单 (总额: ",
     successTitle: "🎉 订单已成功提交！",
@@ -235,7 +232,37 @@ export const zh = {
     gateLoginBtn: "登录 / 注册",
     gateGuestBtn: "以访客身份继续",
     gateGuestNote: "仅需提供您的邮箱和电话号码。",
-    gateBack: "返回"
+    gateBack: "返回",
+    payInstructionsTitle: "完成付款",
+    payInstructionsSubtitle: "扫描二维码或使用以下账户信息付款，然后确认您的付款。",
+    scanQrLabel: "扫码支付",
+    accountNameLabel: "账户名称",
+    accountNumberLabel: "账号 / ID",
+    accountTypeLabel: "账户类型",
+    bankNameLabel: "银行名称",
+    branchNameLabel: "支行名称",
+    routingNumberLabel: "路由号码",
+    swiftCodeLabel: "SWIFT 代码",
+    instructionsLabel: "付款说明",
+    copyBtn: "复制",
+    iHaveCompletedPayment: "我已完成付款",
+    payLaterLink: "稍后完成付款",
+    confirmFormTitle: "付款确认",
+    confirmFormSubtitle: "请填写付款信息以便我们核实。",
+    transactionReferenceLabel: "交易编号 / 参考号",
+    senderNameLabel: "付款人姓名",
+    senderIdentifierLabel: "付款人电话号码 / 账户标识",
+    lastDigitsLabel: "末 5-6 位数字",
+    paidAtLabel: "付款日期与时间",
+    proofLabel: "付款截图 / 凭证",
+    proofOptional: "(可选)",
+    noteLabel: "备注",
+    confirmWarning: "请确保所有付款信息准确无误。提交错误信息可能会延迟付款核实。",
+    submitConfirmationBtn: "提交付款确认",
+    backToInstructions: "返回",
+    confirmSuccessTitle: "🎉 订单已提交 — 付款待核实",
+    confirmSuccessDesc: "您的付款信息已成功提交，正在等待核实。核实完成后我们会发送邮件通知您。",
+    confirmPendingBadge: "待核实"
   },
 
   sourcingModal: {
@@ -322,7 +349,19 @@ export const zh = {
       shipped: "已发货",
       delivered: "已送达",
       cancelled: "已取消"
-    }
+    },
+    paymentStatus: {
+      pending_payment: "待付款",
+      payment_submitted: "付款已提交",
+      under_verification: "核实中",
+      more_info_requested: "需要补充信息",
+      verified: "已核实 / 已付款",
+      rejected: "付款被拒绝",
+      cancelled: "已取消",
+      expired: "付款已过期"
+    },
+    accountCompletePayment: "完成付款",
+    accountViewPaymentStatus: "查看付款状态"
   },
 
   reviews: {

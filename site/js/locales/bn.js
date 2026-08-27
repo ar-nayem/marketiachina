@@ -219,10 +219,7 @@ export const bn = {
     address: "সম্পূর্ণ ঠিকানা (বাসা/দোকান, রোড, থানা, জেলা)",
     city: "শহর / জেলা",
     paymentMethod: "পেমেন্ট মাধ্যম নির্বাচন করুন",
-    bkash: "বিকাশ (bKash)",
-    nagad: "নগদ (Nagad)",
-    bank: "ব্যাংক ট্রান্সফার / এলসি",
-    cod: "ক্যাশ অন ডেলিভারি (অগ্রিম আংশিক বুকিং সহ)",
+    noActiveMethods: "বর্তমানে কোনো পেমেন্ট মাধ্যম উপলব্ধ নেই। সাপোর্টে যোগাযোগ করুন।",
     orderSummary: "অর্ডার সামারি",
     placeOrder: "অর্ডার নিশ্চিত করুন (টাকা: ",
     successTitle: "🎉 অভিনন্দন! আপনার অর্ডার সফলভাবে গ্রহণ করা হয়েছে",
@@ -235,7 +232,37 @@ export const bn = {
     gateLoginBtn: "লগইন / সাইন আপ",
     gateGuestBtn: "গেস্ট হিসেবে চালিয়ে যান",
     gateGuestNote: "শুধু আপনার ইমেইল ও ফোন নম্বর প্রয়োজন হবে।",
-    gateBack: "পেছনে"
+    gateBack: "পেছনে",
+    payInstructionsTitle: "আপনার পেমেন্ট সম্পন্ন করুন",
+    payInstructionsSubtitle: "QR কোড স্ক্যান করুন অথবা নিচের অ্যাকাউন্ট তথ্য ব্যবহার করুন, তারপর পেমেন্ট নিশ্চিত করুন।",
+    scanQrLabel: "পে করতে স্ক্যান করুন",
+    accountNameLabel: "অ্যাকাউন্টের নাম",
+    accountNumberLabel: "অ্যাকাউন্ট নম্বর / আইডি",
+    accountTypeLabel: "অ্যাকাউন্ট টাইপ",
+    bankNameLabel: "ব্যাংকের নাম",
+    branchNameLabel: "শাখার নাম",
+    routingNumberLabel: "রাউটিং নম্বর",
+    swiftCodeLabel: "সুইফট কোড",
+    instructionsLabel: "নির্দেশনা",
+    copyBtn: "কপি করুন",
+    iHaveCompletedPayment: "আমি পেমেন্ট সম্পন্ন করেছি",
+    payLaterLink: "পরে পেমেন্ট সম্পন্ন করব",
+    confirmFormTitle: "পেমেন্ট নিশ্চিতকরণ",
+    confirmFormSubtitle: "যাচাইয়ের জন্য আপনার পেমেন্টের তথ্য দিন।",
+    transactionReferenceLabel: "ট্রানজেকশন আইডি / রেফারেন্স নম্বর",
+    senderNameLabel: "প্রেরকের নাম",
+    senderIdentifierLabel: "প্রেরকের ফোন নম্বর / অ্যাকাউন্ট আইডি",
+    lastDigitsLabel: "শেষ ৫-৬ ডিজিট",
+    paidAtLabel: "পেমেন্টের তারিখ ও সময়",
+    proofLabel: "পেমেন্টের স্ক্রিনশট / প্রমাণ",
+    proofOptional: "(ঐচ্ছিক)",
+    noteLabel: "অতিরিক্ত নোট",
+    confirmWarning: "অনুগ্রহ করে নিশ্চিত করুন সব তথ্য সঠিক। ভুল তথ্য দিলে পেমেন্ট যাচাইয়ে বিলম্ব হতে পারে।",
+    submitConfirmationBtn: "পেমেন্ট নিশ্চিতকরণ জমা দিন",
+    backToInstructions: "পেছনে",
+    confirmSuccessTitle: "🎉 অর্ডার সম্পন্ন — পেমেন্ট যাচাইকরণের অপেক্ষায়",
+    confirmSuccessDesc: "আপনার পেমেন্ট তথ্য সফলভাবে জমা দেওয়া হয়েছে এবং যাচাইয়ের অপেক্ষায় আছে। নিশ্চিত হলে আমরা ইমেইল করব।",
+    confirmPendingBadge: "যাচাইয়ের অপেক্ষায়"
   },
 
   sourcingModal: {
@@ -322,7 +349,19 @@ export const bn = {
       shipped: "শিপড",
       delivered: "ডেলিভারড",
       cancelled: "বাতিল হয়েছে"
-    }
+    },
+    paymentStatus: {
+      pending_payment: "পেমেন্ট বাকি",
+      payment_submitted: "পেমেন্ট জমা হয়েছে",
+      under_verification: "যাচাই চলছে",
+      more_info_requested: "তথ্য প্রয়োজন",
+      verified: "যাচাইকৃত / পরিশোধিত",
+      rejected: "পেমেন্ট প্রত্যাখ্যাত",
+      cancelled: "বাতিল",
+      expired: "পেমেন্টের সময় শেষ"
+    },
+    accountCompletePayment: "পেমেন্ট সম্পন্ন করুন",
+    accountViewPaymentStatus: "পেমেন্ট স্ট্যাটাস দেখুন"
   },
 
   reviews: {

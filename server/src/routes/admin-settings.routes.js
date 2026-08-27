@@ -12,7 +12,9 @@ const KEY_MAP = {
   whatsappNumber: 'whatsapp_number',
   contactEmail: 'contact_email',
   shippingRates: 'shipping_rates',
-  adminFont: 'admin_font'
+  adminFont: 'admin_font',
+  paymentProofRequired: 'payment_proof_required',
+  paymentExpiryHours: 'payment_expiry_hours'
 };
 
 // Predefined, safe list only - never an arbitrary external font URL. Keep in
@@ -50,7 +52,9 @@ router.get('/', (req, res) => {
     whatsappNumber: getSetting('whatsapp_number'),
     contactEmail: getSetting('contact_email'),
     shippingRates: getSetting('shipping_rates'),
-    adminFont: getSetting('admin_font') || 'default'
+    adminFont: getSetting('admin_font') || 'default',
+    paymentProofRequired: !!getSetting('payment_proof_required'),
+    paymentExpiryHours: getSetting('payment_expiry_hours') || 0
   });
 });
 

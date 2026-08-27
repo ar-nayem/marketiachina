@@ -135,7 +135,84 @@ function runMigrations(db) {
     insertOrderStatusHistory.run(order.id, order.status, order.created_at);
   }
 
-  console.log('[migrations] schema ready (RBAC + catalog)');
+  // l. Rebuild `orders` to add payment_status/payment_expires_at and drop the
+  // old payment_method CHECK constraint (SQLite can't ALTER a CHECK in
+  // place - a full table rebuild is the only way). Guarded on the presence
+  // of payment_status so this only ever runs once per database.
+  const orderColumns = new Set(db.prepare('PRAGMA table_info(orders)').all().map((col) => col.name));
+  if (!orderColumns.has('payment_status')) {
+    db.exec('PRAGMA foreign_keys = OFF');
+    db.exec('BEGIN');
+    try {
+      db.exec(`
+        CREATE TABLE orders_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          order_number TEXT NOT NULL UNIQUE,
+          access_token TEXT NOT NULL UNIQUE,
+          customer_id INTEGER REFERENCES customers(id),
+          customer_name TEXT NOT NULL,
+          customer_phone TEXT NOT NULL,
+          customer_email TEXT NOT NULL,
+          shipping_address TEXT NOT NULL,
+          payment_method TEXT NOT NULL,
+          shipping_method TEXT NOT NULL CHECK (shipping_method IN ('air','sea')),
+          subtotal_bdt REAL NOT NULL,
+          discount_bdt REAL NOT NULL DEFAULT 0,
+          shipping_fee_bdt REAL NOT NULL,
+          total_bdt REAL NOT NULL,
+          promo_code TEXT,
+          status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','confirmed','shipped','delivered','cancelled')),
+          payment_status TEXT NOT NULL DEFAULT 'pending_payment',
+          payment_expires_at TEXT,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+      `);
+      // Backfill: orders that had already progressed past 'pending' under the
+      // old (informal) payment flow are treated as already verified, so this
+      // migration never regresses a real admin's already-confirmed/shipped/
+      // delivered orders back into the new manual-verification queue.
+      db.exec(`
+        INSERT INTO orders_new (id, order_number, access_token, customer_id, customer_name, customer_phone,
+          customer_email, shipping_address, payment_method, shipping_method, subtotal_bdt, discount_bdt,
+          shipping_fee_bdt, total_bdt, promo_code, status, payment_status, created_at)
+        SELECT id, order_number, access_token, customer_id, customer_name, customer_phone,
+          customer_email, shipping_address, payment_method, shipping_method, subtotal_bdt, discount_bdt,
+          shipping_fee_bdt, total_bdt, promo_code, status,
+          CASE
+            WHEN status = 'cancelled' THEN 'cancelled'
+            WHEN status = 'pending' THEN 'pending_payment'
+            ELSE 'verified'
+          END,
+          created_at
+        FROM orders
+      `);
+      db.exec('DROP TABLE orders');
+      db.exec('ALTER TABLE orders_new RENAME TO orders');
+      db.exec('COMMIT');
+    } catch (err) {
+      db.exec('ROLLBACK');
+      db.exec('PRAGMA foreign_keys = ON');
+      throw err;
+    }
+    db.exec('PRAGMA foreign_keys = ON');
+  }
+
+  // m. Seed the five payment methods. Each starts 'inactive' - the Owner
+  // must fill in QR/account details and activate it in the admin Payment
+  // Settings page before buyers ever see it at checkout.
+  const PAYMENT_METHOD_SEEDS = [
+    { key: 'alipay', name: 'Alipay', sortOrder: 0 },
+    { key: 'wechat', name: 'WeChat Pay', sortOrder: 1 },
+    { key: 'bkash', name: 'bKash', sortOrder: 2 },
+    { key: 'nagad', name: 'Nagad', sortOrder: 3 },
+    { key: 'bank', name: 'Bank Account', sortOrder: 4 },
+  ];
+  const insertPaymentMethod = db.prepare(`INSERT OR IGNORE INTO payment_methods (key, name, sort_order) VALUES (?, ?, ?)`);
+  for (const m of PAYMENT_METHOD_SEEDS) {
+    insertPaymentMethod.run(m.key, m.name, m.sortOrder);
+  }
+
+  console.log('[migrations] schema ready (RBAC + catalog + payments)');
 }
 
 module.exports = { runMigrations };

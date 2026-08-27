@@ -13,6 +13,8 @@ const NAV_ITEMS = [
   { href: '/admin/returns.html', icon: '↩️', label: 'Returns', key: 'returns' },
   { href: '/admin/messages.html', icon: '💬', label: 'Messages', key: 'messages' },
   { href: '/admin/reviews.html', icon: '⭐', label: 'Reviews', key: 'reviews' },
+  { href: '/admin/payments.html', icon: '✅', label: 'Payment Verification', key: 'payments' },
+  { href: '/admin/payment-methods.html', icon: '💳', label: 'Payment Settings', key: 'payment-methods' },
   { href: '/admin/leads.html', icon: '🎯', label: 'Leads', key: 'leads' },
   { href: '/admin/customers.html', icon: '👤', label: 'Customers', key: 'customers' },
   { href: '/admin/users.html', icon: '👥', label: 'Users & Roles', key: 'users' },

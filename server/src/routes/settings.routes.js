@@ -27,7 +27,8 @@ router.get('/', (req, res) => {
   res.json({
     businessName: getSetting('business_name') ?? 'Marketia China',
     logoUrl: getSetting('logo_url') ?? '',
-    whatsappNumber: getSetting('whatsapp_number') ?? ''
+    whatsappNumber: getSetting('whatsapp_number') ?? '',
+    paymentProofRequired: !!getSetting('payment_proof_required')
   });
 });
 

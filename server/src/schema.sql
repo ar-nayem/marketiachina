@@ -105,7 +105,11 @@ CREATE TABLE IF NOT EXISTS orders (
   customer_phone TEXT NOT NULL,
   customer_email TEXT NOT NULL,
   shipping_address TEXT NOT NULL,
-  payment_method TEXT NOT NULL CHECK (payment_method IN ('bkash','nagad','bank','cod')),
+  -- No CHECK constraint on payment_method - the active set of methods is
+  -- data-driven from the payment_methods table (Owner-managed) rather than
+  -- a fixed list, same "validate in application code only" convention as
+  -- products.status/inventory_status below.
+  payment_method TEXT NOT NULL,
   shipping_method TEXT NOT NULL CHECK (shipping_method IN ('air','sea')),
   subtotal_bdt REAL NOT NULL,
   discount_bdt REAL NOT NULL DEFAULT 0,
@@ -113,6 +117,14 @@ CREATE TABLE IF NOT EXISTS orders (
   total_bdt REAL NOT NULL,
   promo_code TEXT,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','confirmed','shipped','delivered','cancelled')),
+  -- Manual payment verification state - deliberately separate from the
+  -- fulfillment `status` above. Submitting a payment confirmation form must
+  -- never auto-advance this past 'payment_submitted'; only an Owner/payment
+  -- manager approving or rejecting in the Payment Verification Dashboard can
+  -- move it to 'verified' or 'rejected'. 'expired' is computed at read time
+  -- from payment_expires_at, never stored here.
+  payment_status TEXT NOT NULL DEFAULT 'pending_payment',
+  payment_expires_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -341,5 +353,66 @@ CREATE TABLE IF NOT EXISTS notifications (
   related_type TEXT,
   related_id TEXT,
   is_read INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Phase 6: manual payment verification system (Alipay / WeChat Pay / bKash /
+-- Nagad / Bank Account). A submitted payment is never auto-verified - only
+-- an Owner/authorized payment manager approving in the admin dashboard can
+-- move a submission (and its order's payment_status) to 'verified'.
+
+CREATE TABLE IF NOT EXISTS payment_methods (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  key TEXT NOT NULL UNIQUE CHECK (key IN ('alipay','wechat','bkash','nagad','bank')),
+  name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'inactive' CHECK (status IN ('active','inactive')),
+  qr_code_url TEXT,
+  account_name TEXT,
+  account_number TEXT,
+  account_type TEXT,
+  bank_name TEXT,
+  branch_name TEXT,
+  routing_number TEXT,
+  swift_code TEXT,
+  instructions TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  updated_by_admin_id INTEGER REFERENCES admin_users(id),
+  updated_by_admin_name TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS payment_submissions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  customer_id INTEGER REFERENCES customers(id),
+  payment_method_key TEXT NOT NULL,
+  transaction_reference TEXT,
+  sender_name TEXT NOT NULL,
+  sender_identifier TEXT NOT NULL,
+  last_digits TEXT,
+  amount_bdt REAL NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'BDT',
+  paid_at TEXT NOT NULL,
+  proof_image_url TEXT,
+  note TEXT,
+  status TEXT NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted','under_verification','more_info_requested','verified','rejected','cancelled')),
+  verification_note TEXT,
+  rejection_reason TEXT,
+  verified_by_admin_id INTEGER REFERENCES admin_users(id),
+  verified_by_admin_name TEXT,
+  verified_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS payment_status_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  submission_id INTEGER REFERENCES payment_submissions(id) ON DELETE CASCADE,
+  status TEXT NOT NULL,
+  note TEXT,
+  changed_by_admin_id INTEGER REFERENCES admin_users(id),
+  changed_by_admin_name TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
