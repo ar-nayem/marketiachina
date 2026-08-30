@@ -20,6 +20,8 @@ const PERMISSIONS = [
   { key: 'activity_logs.view', label: 'View activity logs', category: 'System' },
   { key: 'payments.manage_settings', label: 'Manage payment methods, QR codes & account details', category: 'Payments' },
   { key: 'payments.verify', label: 'View & verify payment submissions', category: 'Payments' },
+  { key: 'email.manage_senders', label: 'Connect, change & disconnect the sending Gmail account', category: 'Email' },
+  { key: 'email.view_history', label: 'View, search & retry sent email history', category: 'Email' },
 ];
 
 const DEFAULT_ROLE_PERMISSIONS = {

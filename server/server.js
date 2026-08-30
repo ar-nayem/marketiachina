@@ -45,6 +45,7 @@ app.use('/api/admin/returns', require('./src/routes/admin-returns.routes'));
 app.use('/api/admin/users', require('./src/routes/admin-users.routes'));
 app.use('/api/admin/roles', require('./src/routes/admin-roles.routes'));
 app.use('/api/admin/activity-logs', require('./src/routes/admin-activity.routes'));
+app.use('/api/admin/email', require('./src/routes/admin-email.routes'));
 app.use('/api/admin', require('./src/routes/admin-shipments.routes'));
 app.use('/api/admin', require('./src/routes/admin-misc.routes'));
 

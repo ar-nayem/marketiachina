@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email &amp; Gmail | Marketia China Admin</title>
+  <meta name="robots" content="noindex, nofollow" />
+
+  <!-- Tailwind CSS (locally built, no CDN dependency at runtime) -->
+  <link rel="stylesheet" href="../css/tailwind.build.css" />
+
+  <!-- Marketia China Design System Stylesheets -->
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/glass.css" />
+  <link rel="stylesheet" href="../css/components.css" />
+
+  <!-- Admin control panel layout -->
+  <link rel="stylesheet" href="css/admin.css" />
+</head>
+<body>
+  <div id="admin-root"></div>
+
+  <script type="module">
+    import { apiFetch, requireAdminAuth, renderSidebar, wireLogout, escapeHtml, formatDate } from '/admin/js/adminShell.js';
+
+    const STATUS_BADGE = {
+      connected: { cls: 'admin-badge-green', label: '● Connected' },
+      disconnected: { cls: 'admin-badge-neutral', label: '○ Not Connected' },
+      error: { cls: 'admin-badge-red', label: '⚠ Connection Error' },
+    };
+
+    function statusBadge(status) {
+      const s = STATUS_BADGE[status] || STATUS_BADGE.disconnected;
+      return `<span class="admin-badge ${s.cls}">${s.label}</span>`;
+    }
+
+    function fmtDateTime(isoLike) {
+      if (!isoLike) return '—';
+      try {
+        const d = new Date(isoLike.replace(' ', 'T') + 'Z');
+        return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      } catch (_) {
+        return isoLike;
+      }
+    }
+
+    let currentData = null;
+
+    function renderMain(container, admin) {
+      const params = new URLSearchParams(window.location.search);
+      const connectedId = params.get('connected');
+      const oauthError = params.get('error');
+
+      const active = currentData.active;
+
+      container.innerHTML = `
+        <div class="admin-shell">
+          ${renderSidebar('email-settings', admin)}
+          <div class="admin-main">
+            <div class="admin-topbar">
+              <h1>Email &amp; Gmail Configuration</h1>
+            </div>
+            <div class="admin-content">
+              ${oauthError ? `
+                <div class="admin-panel" style="max-width:640px;margin-bottom:20px;border-color:var(--mc-china-red);">
+                  <div style="padding:16px 20px;color:var(--mc-china-red);font-size:13px;">
+                    ⚠ Connecting that Gmail account failed. Nothing changed — your current active sender is still active. Please try again.
+                  </div>
+                </div>
+              ` : ''}
+
+              <div id="pending-activation-slot"></div>
+
+              <div class="admin-panel" style="max-width:640px;">
+                <div class="admin-panel-header" style="display:flex;align-items:center;justify-content:space-between;">
+                  <h2>Active Sender</h2>
+                  ${active ? statusBadge(active.status) : statusBadge('disconnected')}
+                </div>
+                <div style="padding:20px;display:flex;flex-direction:column;gap:14px;">
+                  ${active ? `
+                    <div style="display:grid;grid-template-columns:160px 1fr;gap:8px 12px;font-size:13px;">
+                      <div style="color:var(--text-muted);">Current Sending Email</div>
+                      <div style="font-weight:700;color:var(--text-primary);">${escapeHtml(active.gmailAddress)}</div>
+                      <div style="color:var(--text-muted);">Sender Name</div>
+                      <div>${escapeHtml(active.senderName)}</div>
+                      <div style="color:var(--text-muted);">Reply-To</div>
+                      <div>${active.replyTo ? escapeHtml(active.replyTo) : '—'}</div>
+                      <div style="color:var(--text-muted);">Last Successful Connection</div>
+                      <div>${fmtDateTime(active.lastConnectedAt)}</div>
+                      <div style="color:var(--text-muted);">Last Email Sent</div>
+                      <div>${fmtDateTime(active.lastSentAt)}</div>
+                      <div style="color:var(--text-muted);">Last Test Email</div>
+                      <div>${fmtDateTime(active.lastTestAt)}</div>
+                      <div style="color:var(--text-muted);">Emails Sent</div>
+                      <div>${currentData.emailsSent.toLocaleString()}</div>
+                      <div style="color:var(--text-muted);">Failed Emails</div>
+                      <div>${currentData.failedEmails.toLocaleString()}</div>
+                    </div>
+                  ` : `
+                    <div class="admin-table-empty" style="padding:8px 0;">No Gmail account is connected. Customer emails will fail to send until one is connected.</div>
+                  `}
+                  <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;">
+                    <button type="button" class="btn-primary" id="change-gmail-btn">${active ? 'Change Gmail' : 'Connect Gmail'}</button>
+                    <button type="button" class="btn-secondary" id="toggle-test-btn" ${active ? '' : 'disabled'}>Send Test Email</button>
+                    <button type="button" class="btn-secondary" id="disconnect-btn" style="color:var(--mc-china-red);" ${active ? '' : 'disabled'}>Disconnect Gmail</button>
+                  </div>
+                  <div id="test-email-panel" style="display:none;border-top:1px solid var(--border-color);padding-top:16px;margin-top:4px;">
+                    <label class="form-label" for="test-recipient">Recipient</label>
+                    <div style="display:flex;gap:10px;">
+                      <input class="form-input" type="email" id="test-recipient" placeholder="customer@example.com" style="flex:1;" />
+                      <button type="button" class="btn-primary" id="send-test-btn">Send Test Email</button>
+                    </div>
+                    <div id="test-email-status" style="font-size:13px;margin-top:8px;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="admin-panel" style="max-width:640px;margin-top:24px;" ${active ? '' : 'hidden'}>
+                <div class="admin-panel-header"><h2>Sender Name &amp; Reply-To</h2></div>
+                <form id="sender-name-form" style="padding:20px;display:flex;flex-direction:column;gap:16px;">
+                  <div>
+                    <label class="form-label" for="sender-name-input">Sender Name</label>
+                    <input class="form-input" type="text" id="sender-name-input" value="${active ? escapeHtml(active.senderName) : ''}" />
+                  </div>
+                  <div>
+                    <label class="form-label" for="reply-to-input">Reply-To (optional)</label>
+                    <input class="form-input" type="email" id="reply-to-input" value="${active && active.replyTo ? escapeHtml(active.replyTo) : ''}" placeholder="support@marketiachina.com" />
+                  </div>
+                  <div style="display:flex;align-items:center;gap:14px;">
+                    <button type="submit" class="btn-primary" id="save-name-btn">Save</button>
+                    <span id="save-name-status" style="font-size:13px;color:var(--text-muted);"></span>
+                  </div>
+                </form>
+              </div>
+
+              <div style="margin-top:20px;">
+                <a href="/admin/outbox.html" class="btn-secondary" style="display:inline-block;padding:8px 16px;font-size:13px;">View Email History →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      wireLogout();
+      wireActions(active);
+
+      if (connectedId) loadPendingActivation(Number(connectedId));
+    }
+
+    async function loadPendingActivation(id) {
+      const slot = document.getElementById('pending-activation-slot');
+      try {
+        const { sender } = await apiFetch(`/api/admin/email/sender/${id}`);
+        if (!sender || sender.isActive) return;
+        slot.innerHTML = `
+          <div class="admin-panel" style="max-width:640px;margin-bottom:20px;border-color:var(--mc-gold);">
+            <div style="padding:18px 20px;">
+              <div style="font-weight:700;margin-bottom:6px;">New Gmail Verified</div>
+              <div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;">
+                <strong>${escapeHtml(sender.gmailAddress)}</strong> was verified and can send email.
+              </div>
+              <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">
+                Current sender: ${currentData.active ? escapeHtml(currentData.active.gmailAddress) : '(none)'}.
+                After confirming, all future emails will be sent using the new Gmail account. Previous email history will not change.
+              </div>
+              <div style="display:flex;gap:10px;">
+                <button type="button" class="btn-primary" id="confirm-activate-btn">Confirm &amp; Activate</button>
+                <button type="button" class="btn-secondary" id="cancel-activate-btn">Cancel</button>
+              </div>
+            </div>
+          </div>
+        `;
+        document.getElementById('confirm-activate-btn').addEventListener('click', async () => {
+          const btn = document.getElementById('confirm-activate-btn');
+          btn.disabled = true;
+          btn.textContent = 'Activating…';
+          try {
+            await apiFetch(`/api/admin/email/sender/${id}/activate`, { method: 'POST' });
+            window.location.href = '/admin/email-settings.html';
+          } catch (err) {
+            alert(`Failed to activate: ${err.message}`);
+            btn.disabled = false;
+            btn.textContent = 'Confirm & Activate';
+          }
+        });
+        document.getElementById('cancel-activate-btn').addEventListener('click', () => {
+          window.location.href = '/admin/email-settings.html';
+        });
+      } catch (_) {
+        // Sender no longer exists or isn't visible - just drop the banner silently.
+      }
+    }
+
+    function wireActions(active) {
+      document.getElementById('change-gmail-btn').addEventListener('click', () => {
+        window.location.href = '/api/admin/email/oauth/start';
+      });
+
+      document.getElementById('toggle-test-btn').addEventListener('click', () => {
+        const panel = document.getElementById('test-email-panel');
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+      });
+
+      document.getElementById('send-test-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('send-test-btn');
+        const status = document.getElementById('test-email-status');
+        const recipient = document.getElementById('test-recipient').value.trim();
+        if (!recipient) {
+          status.style.color = 'var(--mc-china-red)';
+          status.textContent = 'Enter a recipient email first.';
+          return;
+        }
+        btn.disabled = true;
+        status.style.color = 'var(--text-muted)';
+        status.textContent = 'Sending…';
+        try {
+          const result = await apiFetch('/api/admin/email/sender/test', {
+            method: 'POST',
+            body: JSON.stringify({ recipient }),
+          });
+          status.style.color = '#10A34A';
+          status.textContent = `✓ Test email sent successfully from ${result.sentFrom}.`;
+        } catch (err) {
+          status.style.color = 'var(--mc-china-red)';
+          status.textContent = `✕ Test email failed: ${err.message}`;
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      document.getElementById('disconnect-btn').addEventListener('click', async () => {
+        if (!active) return;
+        const ok = confirm(
+          `Disconnect Gmail?\n\nCurrent sender: ${active.gmailAddress}\n\nDisconnecting may prevent future emails from being sent until another Gmail account is connected.`
+        );
+        if (!ok) return;
+        try {
+          await apiFetch('/api/admin/email/sender/disconnect', { method: 'POST' });
+          window.location.href = '/admin/email-settings.html';
+        } catch (err) {
+          alert(`Failed to disconnect: ${err.message}`);
+        }
+      });
+
+      const nameForm = document.getElementById('sender-name-form');
+      if (nameForm) {
+        nameForm.addEventListener('submit', async (evt) => {
+          evt.preventDefault();
+          const btn = document.getElementById('save-name-btn');
+          const status = document.getElementById('save-name-status');
+          btn.disabled = true;
+          status.style.color = 'var(--text-muted)';
+          status.textContent = 'Saving…';
+          try {
+            await apiFetch('/api/admin/email/sender/active', {
+              method: 'PATCH',
+              body: JSON.stringify({
+                senderName: document.getElementById('sender-name-input').value,
+                replyTo: document.getElementById('reply-to-input').value,
+              }),
+            });
+            status.style.color = 'var(--text-muted)';
+            status.textContent = 'Saved.';
+          } catch (err) {
+            status.style.color = 'var(--mc-china-red)';
+            status.textContent = `Failed to save: ${err.message}`;
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      }
+    }
+
+    function renderPermissionDenied(container, admin) {
+      container.innerHTML = `
+        <div class="admin-shell">
+          ${renderSidebar('email-settings', admin)}
+          <div class="admin-main">
+            <div class="admin-topbar"><h1>Email &amp; Gmail Configuration</h1></div>
+            <div class="admin-content">
+              <div class="admin-panel" style="max-width:520px;">
+                <div style="padding:32px 24px;text-align:center;color:var(--text-muted);font-size:14px;">
+                  You don't have permission to view this page.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      wireLogout();
+    }
+
+    async function init() {
+      const admin = await requireAdminAuth();
+      if (!admin) return;
+
+      const container = document.getElementById('admin-root');
+      try {
+        currentData = await apiFetch('/api/admin/email/sender');
+      } catch (err) {
+        renderPermissionDenied(container, admin);
+        return;
+      }
+
+      renderMain(container, admin);
+    }
+
+    init();
+  </script>
+</body>
+</html>

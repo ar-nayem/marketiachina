@@ -335,6 +335,7 @@ router.post('/orders/:id/ship', requirePermission('orders.ship'), async (req, re
         html: renderShipmentEmailHtml(order, courier, result.trackingNumber),
         kind: 'shipment',
         relatedOrderId: order.id,
+        triggeredBy: { type: req.admin.role === 'admin' ? 'admin' : 'moderator', adminId: req.admin.id, name: req.admin.name },
       });
     } catch (err) {
       console.error('[SHIPMENTS] Failed to queue shipped-notification email:', err.message);

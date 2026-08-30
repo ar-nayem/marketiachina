@@ -57,8 +57,36 @@ CREATE TABLE IF NOT EXISTS products (
   name_bn TEXT, name_en TEXT NOT NULL, name_zh TEXT,
   tagline_bn TEXT, tagline_en TEXT, tagline_zh TEXT,
   description_bn TEXT, description_en TEXT, description_zh TEXT,
+  brand TEXT,
+  variant1_name TEXT,
+  variant1_values TEXT,
+  variant2_name TEXT,
+  variant2_values TEXT,
+  highlights_bn TEXT, highlights_en TEXT, highlights_zh TEXT,
+  whats_in_box_bn TEXT, whats_in_box_en TEXT, whats_in_box_zh TEXT,
+  package_weight_kg REAL,
+  package_length_cm REAL,
+  package_width_cm REAL,
+  package_height_cm REAL,
+  has_dangerous_goods INTEGER NOT NULL DEFAULT 0,
+  promo_long_image_url TEXT,
+  promo_white_bg_image_url TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS product_variants (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  variant1_value TEXT,
+  variant2_value TEXT,
+  price REAL,
+  special_price REAL,
+  stock INTEGER NOT NULL DEFAULT 0,
+  seller_sku TEXT,
+  free_items INTEGER NOT NULL DEFAULT 0,
+  is_available INTEGER NOT NULL DEFAULT 1,
+  sort_order INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS product_specs (
@@ -135,7 +163,8 @@ CREATE TABLE IF NOT EXISTS order_items (
   product_name_snapshot TEXT NOT NULL,
   unit_price_bdt REAL NOT NULL,
   quantity INTEGER NOT NULL,
-  line_total_bdt REAL NOT NULL
+  line_total_bdt REAL NOT NULL,
+  is_pre_order INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS messages (
@@ -172,7 +201,39 @@ CREATE TABLE IF NOT EXISTS mail_outbox (
   kind TEXT NOT NULL,
   related_order_id INTEGER,
   sent_at TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  sender_email TEXT,
+  sender_name TEXT,
+  sender_id INTEGER REFERENCES email_senders(id),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','sent','failed')),
+  error_message TEXT,
+  triggered_by_type TEXT NOT NULL DEFAULT 'system' CHECK (triggered_by_type IN ('system','admin','moderator')),
+  triggered_by_admin_id INTEGER REFERENCES admin_users(id),
+  triggered_by_name TEXT,
+  message_id TEXT,
+  retry_of_id INTEGER REFERENCES mail_outbox(id)
+);
+
+-- Gmail Sender Management: one row per Gmail account ever connected via
+-- OAuth. At most one row has is_active = 1 - enforced in application code
+-- (server/src/routes/admin-email.routes.js), never by a DB constraint, since
+-- SQLite has no simple partial-unique-index syntax for this via node:sqlite.
+CREATE TABLE IF NOT EXISTS email_senders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  gmail_address TEXT NOT NULL,
+  sender_name TEXT NOT NULL DEFAULT 'Marketia China',
+  reply_to TEXT,
+  google_refresh_token_enc TEXT,
+  status TEXT NOT NULL DEFAULT 'connected' CHECK (status IN ('connected','disconnected','error')),
+  is_active INTEGER NOT NULL DEFAULT 0,
+  last_connected_at TEXT,
+  last_error TEXT,
+  last_test_at TEXT,
+  last_sent_at TEXT,
+  connected_by_admin_id INTEGER REFERENCES admin_users(id),
+  connected_by_admin_name TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS site_settings (

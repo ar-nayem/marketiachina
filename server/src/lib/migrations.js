@@ -212,7 +212,91 @@ function runMigrations(db) {
     insertPaymentMethod.run(m.key, m.name, m.sortOrder);
   }
 
-  console.log('[migrations] schema ready (RBAC + catalog + payments)');
+  // n. Add new columns to products idempotently (Phase 7: brand, variants,
+  // highlights, what's-in-box, package dimensions, buyer promotion images -
+  // the seller-center-style Add Product form).
+  const catalogV2Columns = new Set(db.prepare('PRAGMA table_info(products)').all().map((col) => col.name));
+  const catalogV2ColumnsToAdd = [
+    ['brand', 'TEXT'],
+    ['variant1_name', 'TEXT'],
+    ['variant1_values', 'TEXT'],
+    ['variant2_name', 'TEXT'],
+    ['variant2_values', 'TEXT'],
+    ['highlights_bn', 'TEXT'],
+    ['highlights_en', 'TEXT'],
+    ['highlights_zh', 'TEXT'],
+    ['whats_in_box_bn', 'TEXT'],
+    ['whats_in_box_en', 'TEXT'],
+    ['whats_in_box_zh', 'TEXT'],
+    ['package_weight_kg', 'REAL'],
+    ['package_length_cm', 'REAL'],
+    ['package_width_cm', 'REAL'],
+    ['package_height_cm', 'REAL'],
+    ['has_dangerous_goods', 'INTEGER NOT NULL DEFAULT 0'],
+    ['promo_long_image_url', 'TEXT'],
+    ['promo_white_bg_image_url', 'TEXT'],
+  ];
+  for (const [columnName, columnDef] of catalogV2ColumnsToAdd) {
+    if (!catalogV2Columns.has(columnName)) {
+      db.exec(`ALTER TABLE products ADD COLUMN ${columnName} ${columnDef}`);
+    }
+  }
+
+  // o. Per-variant-combination price/stock table (Phase 7).
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS product_variants (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      variant1_value TEXT,
+      variant2_value TEXT,
+      price REAL,
+      special_price REAL,
+      stock INTEGER NOT NULL DEFAULT 0,
+      seller_sku TEXT,
+      free_items INTEGER NOT NULL DEFAULT 0,
+      is_available INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    )
+  `);
+
+  // p. Pre-order support: a line item placed while its product was flagged
+  // 'pre_order' (see admin-inventory.routes.js) is snapshotted as such, so
+  // fulfillment staff can tell it apart from a normal in-stock order even
+  // after the product later restocks and inventory_status changes back.
+  const orderItemColumns = new Set(db.prepare('PRAGMA table_info(order_items)').all().map((col) => col.name));
+  if (!orderItemColumns.has('is_pre_order')) {
+    db.exec(`ALTER TABLE order_items ADD COLUMN is_pre_order INTEGER NOT NULL DEFAULT 0`);
+  }
+
+  // q. Gmail Sender Management: extend mail_outbox with sender attribution,
+  // delivery status, trigger source, and retry linkage (Phase 8). email_senders
+  // itself needs no migration entry - schema.sql's CREATE TABLE IF NOT EXISTS
+  // already creates it for existing databases on every boot.
+  const outboxColumns = new Set(db.prepare('PRAGMA table_info(mail_outbox)').all().map((col) => col.name));
+  const outboxColumnsToAdd = [
+    ['sender_email', 'TEXT'],
+    ['sender_name', 'TEXT'],
+    ['sender_id', 'INTEGER REFERENCES email_senders(id)'],
+    ['status', "TEXT NOT NULL DEFAULT 'pending'"],
+    ['error_message', 'TEXT'],
+    ['triggered_by_type', "TEXT NOT NULL DEFAULT 'system'"],
+    ['triggered_by_admin_id', 'INTEGER REFERENCES admin_users(id)'],
+    ['triggered_by_name', 'TEXT'],
+    ['message_id', 'TEXT'],
+    ['retry_of_id', 'INTEGER REFERENCES mail_outbox(id)'],
+  ];
+  for (const [columnName, columnDef] of outboxColumnsToAdd) {
+    if (!outboxColumns.has(columnName)) {
+      db.exec(`ALTER TABLE mail_outbox ADD COLUMN ${columnName} ${columnDef}`);
+    }
+  }
+  // Backfill: rows sent before this migration have sent_at set but no status -
+  // classify them as 'sent' so the Email History filters aren't misleading for
+  // pre-existing history. Rows still NULL after this (dev-mode-logged-only,
+  // pre-feature) are left 'pending', matching what they actually were.
+  db.exec(`UPDATE mail_outbox SET status = 'sent' WHERE sent_at IS NOT NULL AND status = 'pending'`);
+
+  console.log('[migrations] schema ready (RBAC + catalog + payments + email senders)');
 }
 
 module.exports = { runMigrations };

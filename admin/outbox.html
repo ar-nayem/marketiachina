@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mail Outbox | Marketia China Admin</title>
+  <title>Email History | Marketia China Admin</title>
   <meta name="robots" content="noindex, nofollow" />
 
   <!-- Tailwind CSS (locally built, no CDN dependency at runtime) -->
@@ -45,11 +45,28 @@
 
     const KIND_BADGE_CLASS = {
       invoice: 'admin-badge-gold',
-      password_reset: 'admin-badge-red',
-      welcome: 'admin-badge-neutral'
+      password_reset: 'admin-badge-neutral',
+      admin_password_reset: 'admin-badge-neutral',
+      payment_submitted: 'admin-badge-neutral',
+      payment_verified: 'admin-badge-green',
+      payment_rejected: 'admin-badge-red',
+      payment_more_info: 'admin-badge-gold',
+      shipment: 'admin-badge-gold',
+      test: 'admin-badge-neutral'
+    };
+
+    const STATUS_BADGE_CLASS = {
+      sent: 'admin-badge-green',
+      failed: 'admin-badge-red',
+      pending: 'admin-badge-neutral'
     };
 
     let emailsData = [];
+    let filters = { q: '', status: 'all', kind: 'all', senderEmail: 'all', dateFrom: '', dateTo: '' };
+    let page = 1;
+    const LIMIT = 50;
+    let totalCount = 0;
+    let sendersList = [];
 
     function kindBadge(kind) {
       const cls = KIND_BADGE_CLASS[kind] || 'admin-badge-neutral';
@@ -57,10 +74,36 @@
       return `<span class="admin-badge ${cls}">${escapeHtml(label)}</span>`;
     }
 
+    function statusBadge(status) {
+      const cls = STATUS_BADGE_CLASS[status] || 'admin-badge-neutral';
+      return `<span class="admin-badge ${cls}">${escapeHtml(status || 'pending')}</span>`;
+    }
+
+    function triggeredByLabel(email) {
+      if (email.triggeredByType === 'system') return 'System Automation';
+      const role = email.triggeredByType === 'moderator' ? 'Moderator' : 'Admin';
+      return `${role}${email.triggeredByName ? ' — ' + email.triggeredByName : ''}`;
+    }
+
+    async function loadStats() {
+      const wrap = document.getElementById('stats-row');
+      try {
+        const stats = await apiFetch('/api/admin/email/history/stats');
+        wrap.innerHTML = `
+          <div class="admin-panel" style="padding:14px 18px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Total</div><div style="font-size:22px;font-weight:800;">${stats.total.toLocaleString()}</div></div>
+          <div class="admin-panel" style="padding:14px 18px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Sent</div><div style="font-size:22px;font-weight:800;color:#10A34A;">${stats.sent.toLocaleString()}</div></div>
+          <div class="admin-panel" style="padding:14px 18px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Failed</div><div style="font-size:22px;font-weight:800;color:var(--mc-china-red);">${stats.failed.toLocaleString()}</div></div>
+          <div class="admin-panel" style="padding:14px 18px;"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Pending</div><div style="font-size:22px;font-weight:800;">${stats.pending.toLocaleString()}</div></div>
+        `;
+      } catch (_) {
+        wrap.innerHTML = '';
+      }
+    }
+
     function renderRows() {
       const tbody = document.getElementById('outbox-tbody');
       if (!emailsData.length) {
-        tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty">No emails logged yet.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="admin-table-empty">No emails match these filters.</td></tr>`;
         return;
       }
       tbody.innerHTML = emailsData
@@ -68,11 +111,14 @@
           (email, i) => `
         <tr>
           <td>${escapeHtml(email.toEmail)}</td>
+          <td>${email.senderEmail ? escapeHtml(email.senderEmail) : '—'}</td>
           <td>${escapeHtml(email.subject)}</td>
           <td>${kindBadge(email.kind)}</td>
+          <td>${statusBadge(email.status)}</td>
           <td>${formatDate(email.createdAt)}</td>
-          <td style="text-align:right;">
+          <td style="text-align:right;white-space:nowrap;">
             <button class="btn-secondary text-xs" data-view-idx="${i}">View</button>
+            ${email.status === 'failed' ? `<button class="btn-secondary text-xs" data-retry-idx="${i}" style="margin-left:6px;">Retry</button>` : ''}
           </td>
         </tr>
       `
@@ -82,7 +128,22 @@
 
     function openPreview(email) {
       document.getElementById('outbox-preview-to').textContent = email.toEmail || '';
+      document.getElementById('outbox-preview-sender').textContent = email.senderEmail ? `${email.senderName || ''} <${email.senderEmail}>` : '—';
       document.getElementById('outbox-preview-subject').textContent = email.subject || '';
+      document.getElementById('outbox-preview-status').innerHTML = statusBadge(email.status);
+      document.getElementById('outbox-preview-triggered').textContent = triggeredByLabel(email);
+      document.getElementById('outbox-preview-order').textContent = email.orderNumber || '—';
+      document.getElementById('outbox-preview-msgid').textContent = email.messageId || '—';
+      const errRow = document.getElementById('outbox-preview-error-row');
+      if (email.status === 'failed') {
+        errRow.style.display = '';
+        document.getElementById('outbox-preview-error').textContent = email.errorMessage || 'Unknown error.';
+      } else {
+        errRow.style.display = 'none';
+      }
+      const retryBtn = document.getElementById('outbox-preview-retry-btn');
+      retryBtn.style.display = email.status === 'failed' ? '' : 'none';
+      retryBtn.dataset.id = email.id;
       document.getElementById('outbox-preview-iframe').srcdoc = email.htmlBody || '';
       document.getElementById('outbox-backdrop').classList.add('open');
       document.getElementById('outbox-slideover').classList.add('open');
@@ -93,16 +154,73 @@
       document.getElementById('outbox-slideover').classList.remove('open');
     }
 
+    function buildQuery() {
+      const params = new URLSearchParams();
+      if (filters.q) params.set('q', filters.q);
+      if (filters.status !== 'all') params.set('status', filters.status);
+      if (filters.kind !== 'all') params.set('kind', filters.kind);
+      if (filters.senderEmail !== 'all') params.set('senderEmail', filters.senderEmail);
+      if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
+      if (filters.dateTo) params.set('dateTo', filters.dateTo);
+      params.set('page', String(page));
+      params.set('limit', String(LIMIT));
+      return params.toString();
+    }
+
+    function renderSenderOptions() {
+      const select = document.getElementById('filter-sender');
+      const current = select.value || 'all';
+      select.innerHTML = `<option value="all">All Senders</option>${sendersList
+        .map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`)
+        .join('')}`;
+      select.value = sendersList.includes(current) ? current : 'all';
+    }
+
+    function renderPagination() {
+      const wrap = document.getElementById('outbox-pagination');
+      const totalPages = Math.max(1, Math.ceil(totalCount / LIMIT));
+      wrap.innerHTML = `
+        <span style="font-size:12px;color:var(--text-muted);">Page ${page} of ${totalPages} (${totalCount.toLocaleString()} total)</span>
+        <button class="btn-secondary text-xs" id="prev-page-btn" ${page <= 1 ? 'disabled' : ''}>Prev</button>
+        <button class="btn-secondary text-xs" id="next-page-btn" ${page >= totalPages ? 'disabled' : ''}>Next</button>
+      `;
+      document.getElementById('prev-page-btn').addEventListener('click', () => { if (page > 1) { page -= 1; loadOutbox(); } });
+      document.getElementById('next-page-btn').addEventListener('click', () => { if (page < totalPages) { page += 1; loadOutbox(); } });
+    }
+
     async function loadOutbox() {
       const tbody = document.getElementById('outbox-tbody');
       try {
-        const data = await apiFetch('/api/admin/outbox');
+        const data = await apiFetch(`/api/admin/email/history?${buildQuery()}`);
         emailsData = data.emails || [];
+        totalCount = data.total || 0;
+        sendersList = data.senders || [];
+        renderSenderOptions();
         renderRows();
+        renderPagination();
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5" class="admin-table-empty">Failed to load outbox: ${escapeHtml(
+        tbody.innerHTML = `<tr><td colspan="7" class="admin-table-empty">Failed to load email history: ${escapeHtml(
           err.message
         )}</td></tr>`;
+      }
+    }
+
+    async function retryEmail(id, triggerBtn) {
+      if (triggerBtn) {
+        triggerBtn.disabled = true;
+        triggerBtn.textContent = 'Retrying…';
+      }
+      try {
+        await apiFetch(`/api/admin/email/history/${id}/retry`, { method: 'POST' });
+        await loadOutbox();
+        await loadStats();
+        closePreview();
+      } catch (err) {
+        alert(`Retry failed: ${err.message}`);
+        if (triggerBtn) {
+          triggerBtn.disabled = false;
+          triggerBtn.textContent = 'Retry';
+        }
       }
     }
 
@@ -115,12 +233,59 @@
           ${renderSidebar('outbox', admin)}
           <div class="admin-main">
             <div class="admin-topbar">
-              <h1>Mail Outbox</h1>
+              <h1>Email History</h1>
             </div>
             <div class="admin-content">
-              <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">
-                Emails are logged here in development mode. Connect real SMTP credentials later to send them for real.
-              </p>
+              <div id="stats-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:20px;"></div>
+
+              <div class="admin-panel" style="margin-bottom:16px;">
+                <div style="padding:16px 18px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+                  <div style="flex:1;min-width:220px;">
+                    <label class="form-label" for="filter-q">Search</label>
+                    <input class="form-input" type="text" id="filter-q" placeholder="Email, order number, sender, message ID…" />
+                  </div>
+                  <div>
+                    <label class="form-label" for="filter-status">Status</label>
+                    <select class="form-input" id="filter-status">
+                      <option value="all">All</option>
+                      <option value="sent">Sent</option>
+                      <option value="failed">Failed</option>
+                      <option value="pending">Pending</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="form-label" for="filter-kind">Type</label>
+                    <select class="form-input" id="filter-kind">
+                      <option value="all">All</option>
+                      <option value="invoice">Order Confirmation</option>
+                      <option value="payment_submitted">Payment Submitted</option>
+                      <option value="payment_verified">Payment Verified</option>
+                      <option value="payment_rejected">Payment Rejected</option>
+                      <option value="payment_more_info">Payment - More Info</option>
+                      <option value="shipment">Shipping Notification</option>
+                      <option value="password_reset">Password Reset (Customer)</option>
+                      <option value="admin_password_reset">Password Reset (Admin)</option>
+                      <option value="test">Test Email</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="form-label" for="filter-sender">Sender</label>
+                    <select class="form-input" id="filter-sender">
+                      <option value="all">All Senders</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="form-label" for="filter-date-from">From</label>
+                    <input class="form-input" type="date" id="filter-date-from" />
+                  </div>
+                  <div>
+                    <label class="form-label" for="filter-date-to">To</label>
+                    <input class="form-input" type="date" id="filter-date-to" />
+                  </div>
+                  <button type="button" class="btn-primary" id="apply-filters-btn">Apply</button>
+                </div>
+              </div>
+
               <div class="admin-panel">
                 <div class="admin-panel-header">
                   <h2>Sent Emails</h2>
@@ -130,17 +295,20 @@
                     <thead>
                       <tr>
                         <th>To</th>
+                        <th>Sender</th>
                         <th>Subject</th>
-                        <th>Kind</th>
+                        <th>Type</th>
+                        <th>Status</th>
                         <th>Date</th>
                         <th></th>
                       </tr>
                     </thead>
                     <tbody id="outbox-tbody">
-                      <tr><td colspan="5" class="admin-table-empty">Loading…</td></tr>
+                      <tr><td colspan="7" class="admin-table-empty">Loading…</td></tr>
                     </tbody>
                   </table>
                 </div>
+                <div id="outbox-pagination" style="display:flex;align-items:center;gap:10px;justify-content:flex-end;padding:14px 18px;"></div>
               </div>
             </div>
           </div>
@@ -149,19 +317,28 @@
         <div class="modal-overlay" id="outbox-backdrop"></div>
         <aside class="admin-slideover" id="outbox-slideover">
           <div class="admin-slideover-header">
-            <h2 style="font-size:15px;font-weight:800;">Email Preview</h2>
+            <h2 style="font-size:15px;font-weight:800;">Email Details</h2>
             <button class="admin-icon-btn" id="outbox-close-btn" aria-label="Close preview">✕</button>
           </div>
           <div class="admin-slideover-body" style="padding:0;gap:0;">
             <div style="padding:16px 24px;border-bottom:1px solid var(--border-color);font-size:13px;color:var(--text-secondary);display:flex;flex-direction:column;gap:6px;">
               <div><strong style="color:var(--text-primary);">To:</strong> <span id="outbox-preview-to"></span></div>
+              <div><strong style="color:var(--text-primary);">From:</strong> <span id="outbox-preview-sender"></span></div>
               <div><strong style="color:var(--text-primary);">Subject:</strong> <span id="outbox-preview-subject"></span></div>
+              <div><strong style="color:var(--text-primary);">Status:</strong> <span id="outbox-preview-status"></span></div>
+              <div><strong style="color:var(--text-primary);">Triggered By:</strong> <span id="outbox-preview-triggered"></span></div>
+              <div><strong style="color:var(--text-primary);">Order:</strong> <span id="outbox-preview-order"></span></div>
+              <div><strong style="color:var(--text-primary);">Message ID:</strong> <span id="outbox-preview-msgid" style="word-break:break-all;"></span></div>
+              <div id="outbox-preview-error-row" style="display:none;">
+                <strong style="color:var(--mc-china-red);">Error:</strong> <span id="outbox-preview-error" style="color:var(--mc-china-red);"></span>
+              </div>
+              <button type="button" class="btn-secondary text-xs" id="outbox-preview-retry-btn" style="display:none;align-self:flex-start;margin-top:4px;">Retry</button>
             </div>
             <iframe
               id="outbox-preview-iframe"
               title="Email preview"
               sandbox=""
-              style="border:0;width:100%;flex:1;min-height:520px;background:#fff;"
+              style="border:0;width:100%;flex:1;min-height:420px;background:#fff;"
             ></iframe>
           </div>
         </aside>
@@ -170,15 +347,40 @@
       wireLogout();
 
       document.getElementById('outbox-tbody').addEventListener('click', (evt) => {
-        const btn = evt.target.closest('[data-view-idx]');
-        if (!btn) return;
-        const email = emailsData[Number(btn.dataset.viewIdx)];
-        if (email) openPreview(email);
+        const viewBtn = evt.target.closest('[data-view-idx]');
+        if (viewBtn) {
+          const email = emailsData[Number(viewBtn.dataset.viewIdx)];
+          if (email) openPreview(email);
+          return;
+        }
+        const retryBtn = evt.target.closest('[data-retry-idx]');
+        if (retryBtn) {
+          const email = emailsData[Number(retryBtn.dataset.retryIdx)];
+          if (email) retryEmail(email.id, retryBtn);
+        }
       });
 
       document.getElementById('outbox-close-btn').addEventListener('click', closePreview);
       document.getElementById('outbox-backdrop').addEventListener('click', closePreview);
+      document.getElementById('outbox-preview-retry-btn').addEventListener('click', (evt) => {
+        retryEmail(Number(evt.target.dataset.id), evt.target);
+      });
 
+      document.getElementById('apply-filters-btn').addEventListener('click', () => {
+        filters.q = document.getElementById('filter-q').value.trim();
+        filters.status = document.getElementById('filter-status').value;
+        filters.kind = document.getElementById('filter-kind').value;
+        filters.senderEmail = document.getElementById('filter-sender').value;
+        filters.dateFrom = document.getElementById('filter-date-from').value;
+        filters.dateTo = document.getElementById('filter-date-to').value;
+        page = 1;
+        loadOutbox();
+      });
+      document.getElementById('filter-q').addEventListener('keydown', (evt) => {
+        if (evt.key === 'Enter') document.getElementById('apply-filters-btn').click();
+      });
+
+      await loadStats();
       await loadOutbox();
     }
 

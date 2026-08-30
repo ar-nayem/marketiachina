@@ -148,6 +148,7 @@ router.post('/:id/approve', (req, res) => {
     html: VERIFIED_EMAIL_HTML(order),
     kind: 'payment_verified',
     relatedOrderId: order.id,
+    triggeredBy: { type: req.admin.role === 'admin' ? 'admin' : 'moderator', adminId: req.admin.id, name: req.admin.name },
   });
 
   logActivity({
@@ -193,6 +194,7 @@ router.post('/:id/reject', (req, res) => {
     html: REJECTED_EMAIL_HTML(order, reason),
     kind: 'payment_rejected',
     relatedOrderId: order.id,
+    triggeredBy: { type: req.admin.role === 'admin' ? 'admin' : 'moderator', adminId: req.admin.id, name: req.admin.name },
   });
 
   logActivity({
@@ -234,6 +236,7 @@ router.post('/:id/request-info', (req, res) => {
     html: MORE_INFO_EMAIL_HTML(order, note),
     kind: 'payment_more_info',
     relatedOrderId: order.id,
+    triggeredBy: { type: req.admin.role === 'admin' ? 'admin' : 'moderator', adminId: req.admin.id, name: req.admin.name },
   });
 
   logActivity({

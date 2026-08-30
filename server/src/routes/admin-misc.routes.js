@@ -17,21 +17,6 @@ router.get('/leads', requirePermission('customers.view'), (req, res) => {
   res.json({ leads });
 });
 
-router.get('/outbox', requirePermission('settings.manage'), (req, res) => {
-  const rows = db
-    .prepare(`SELECT * FROM mail_outbox ORDER BY created_at DESC, id DESC LIMIT 200`)
-    .all();
-  const emails = rows.map((row) => ({
-    id: row.id,
-    toEmail: row.to_email,
-    subject: row.subject,
-    kind: row.kind,
-    createdAt: row.created_at,
-    htmlBody: row.html_body,
-  }));
-  res.json({ emails });
-});
-
 router.get('/stats', requirePermission('orders.view'), (req, res) => {
   const ordersCount = db.prepare(`SELECT COUNT(*) AS n FROM orders`).get().n;
 

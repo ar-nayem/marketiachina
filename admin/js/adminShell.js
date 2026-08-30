@@ -20,7 +20,8 @@ const NAV_ITEMS = [
   { href: '/admin/users.html', icon: '👥', label: 'Users & Roles', key: 'users' },
   { href: '/admin/activity-logs.html', icon: '📜', label: 'Activity Logs', key: 'activity-logs' },
   { href: '/admin/settings.html', icon: '⚙️', label: 'Settings', key: 'settings' },
-  { href: '/admin/outbox.html', icon: '✉️', label: 'Mail Outbox', key: 'outbox' }
+  { href: '/admin/email-settings.html', icon: '📧', label: 'Email & Gmail', key: 'email-settings' },
+  { href: '/admin/outbox.html', icon: '✉️', label: 'Email History', key: 'outbox' }
 ];
 
 export async function apiFetch(url, options = {}) {
