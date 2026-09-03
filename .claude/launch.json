@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "marketiachina",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "cwd": "server",
+      "port": 8080
+    }
+  ]
+}

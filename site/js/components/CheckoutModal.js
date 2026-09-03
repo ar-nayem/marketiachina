@@ -4,6 +4,7 @@ import { cartState } from '../state/cartState.js';
 import { authState } from '../state/authState.js';
 import { settingsState } from '../state/settingsState.js';
 import confetti from '../vendor/confetti/confetti.module.mjs';
+import { fireEmojiBurst } from './EmojiBurst.js';
 
 const METHOD_ICONS = { alipay: '🇨🇳', wechat: '💬', bkash: '🌸', nagad: '🔥', bank: '🏛️' };
 
@@ -416,6 +417,8 @@ export class CheckoutModal {
     this.modalElement.addEventListener('submit', (e) => {
       if (e.target.id === 'checkout-form') {
         e.preventDefault();
+        const submitBtn = e.submitter || e.target.querySelector('button[type="submit"]');
+        fireEmojiBurst(submitBtn);
         this.submitOrder(e.target);
       }
       if (e.target.id === 'confirm-payment-form') {
