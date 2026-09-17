@@ -16,6 +16,9 @@ export class CartDrawer {
     const currentLang = langState.lang;
     const { items, shippingMethod, appliedPromo } = cartState;
     const totals = cartState.getTotals();
+    const cartProducts = items.map(item => productsData.find(p => p.id === item.productId)).filter(Boolean);
+    const hasSoldOutItem = cartProducts.some(p => p.stockStatus === 'out_of_stock' || p.stockStatus === 'discontinued');
+    const hasPreOrderItem = cartProducts.some(p => p.stockStatus === 'pre_order');
 
     this.container.className = `cart-drawer ${this.isOpen ? 'open' : ''}`;
     this.container.innerHTML = `
@@ -46,23 +49,27 @@ export class CartDrawer {
           if (!prod) return '';
           const name = prod.name[currentLang] || prod.name.en;
           const itemTotal = `৳${(prod.priceBDT * item.quantity).toLocaleString()}`;
+          const soldOut = prod.stockStatus === 'out_of_stock' || prod.stockStatus === 'discontinued';
+          const preOrder = prod.stockStatus === 'pre_order';
 
           return `
-            <div class="p-3.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] flex gap-3.5 items-center">
+            <div class="p-3.5 rounded-xl border ${soldOut ? 'border-red-500/40' : 'border-[var(--border-color)]'} bg-[var(--bg-card)] flex gap-3.5 items-center">
               ${prod.image
                 ? `<img src="${prod.image}" alt="${name}" class="w-16 h-16 object-contain rounded-lg bg-[var(--bg-tertiary)] p-1 flex-shrink-0" onerror="this.outerHTML='<span class=&quot;w-16 h-16 rounded-lg bg-[var(--bg-tertiary)] flex-shrink-0 flex items-center justify-center text-xl&quot;>📦</span>'" />`
                 : '<span class="w-16 h-16 rounded-lg bg-[var(--bg-tertiary)] flex-shrink-0 flex items-center justify-center text-xl">📦</span>'}
-              
+
               <div class="flex-1 min-w-0">
                 <h4 class="text-xs font-bold text-[var(--text-primary)] truncate">${name}</h4>
+                ${soldOut ? `<div class="text-[10px] font-bold text-red-500 mt-0.5">${t.products.soldOut}</div>` : ''}
+                ${preOrder ? `<div class="text-[10px] font-bold text-amber-600 mt-0.5">⏳ ${t.products.preOrderBadge}</div>` : ''}
                 <div class="text-xs font-black text-[#DE2910] mt-0.5">${itemTotal}</div>
-                
+
                 <!-- Quantity controls -->
                 <div class="flex items-center gap-2 mt-2">
                   <button data-action="dec-qty" data-id="${prod.id}" class="w-6 h-6 rounded bg-[var(--bg-tertiary)] text-[var(--text-primary)] font-bold text-xs flex items-center justify-center hover:bg-[#DE2910] hover:text-white transition-colors">-</button>
                   <span class="text-xs font-semibold px-2">${item.quantity}</span>
                   <button data-action="inc-qty" data-id="${prod.id}" class="w-6 h-6 rounded bg-[var(--bg-tertiary)] text-[var(--text-primary)] font-bold text-xs flex items-center justify-center hover:bg-[#DE2910] hover:text-white transition-colors">+</button>
-                  
+
                   <button data-action="del-item" data-id="${prod.id}" class="ml-auto text-xs text-red-500 hover:underline">✕</button>
                 </div>
               </div>
@@ -122,8 +129,15 @@ export class CartDrawer {
             </div>
           </div>
 
+          <!-- Stock notices -->
+          ${hasSoldOutItem ? `
+            <div class="text-xs font-semibold px-3 py-2 rounded-lg bg-red-500/10 text-red-600 border border-red-500/20">${t.cart.soldOutNotice}</div>
+          ` : hasPreOrderItem ? `
+            <div class="text-xs font-semibold px-3 py-2 rounded-lg bg-amber-500/10 text-amber-600 border border-amber-500/20">⏳ ${t.cart.preOrderNotice}</div>
+          ` : ''}
+
           <!-- Checkout Button -->
-          <button id="cart-checkout-btn" class="w-full btn-primary py-3.5 text-sm rounded-xl font-bold shadow-lg shadow-red-600/30">
+          <button id="cart-checkout-btn" class="w-full btn-primary py-3.5 text-sm rounded-xl font-bold shadow-lg shadow-red-600/30" ${hasSoldOutItem ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
             ${t.cart.checkoutBtn}
           </button>
         </div>

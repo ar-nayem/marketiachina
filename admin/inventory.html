@@ -100,6 +100,19 @@
     .stock-threshold-display:hover .pencil {
       opacity: 1;
     }
+    .stock-status-display {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .stock-status-display .pencil {
+      font-size: 11px;
+      opacity: 0.5;
+    }
+    .stock-status-display:hover .pencil {
+      opacity: 1;
+    }
     .stock-threshold-input {
       width: 60px;
       padding: 2px 6px;
@@ -303,6 +316,16 @@
       `;
     }
 
+    function renderStatusCell(p) {
+      const badgeInfo = STOCK_STATUS_BADGE[p.stockStatus] || { label: p.stockStatus, cls: 'admin-badge-neutral' };
+      return `
+        <span class="stock-status-display" data-id="${escapeHtml(p.id)}" title="Click to change">
+          <span class="admin-badge ${badgeInfo.cls}">${escapeHtml(badgeInfo.label)}</span>
+          <span class="pencil">✏️</span>
+        </span>
+      `;
+    }
+
     function renderTable() {
       const tbody = document.getElementById('inventory-tbody');
       const list = getFilteredProducts();
@@ -316,8 +339,6 @@
       }
       tbody.innerHTML = list.map(p => {
         const total = (p.bdStock || 0) + (p.cnStock || 0);
-        const badgeInfo = STOCK_STATUS_BADGE[p.stockStatus] || { label: p.stockStatus, cls: 'admin-badge-neutral' };
-        const badge = `<span class="admin-badge ${badgeInfo.cls}">${escapeHtml(badgeInfo.label)}</span>`;
         return `
           <tr>
             <td>${escapeHtml(p.name)}</td>
@@ -325,7 +346,7 @@
             <td>${escapeHtml(p.bdStock)}</td>
             <td>${escapeHtml(p.cnStock)}</td>
             <td>${escapeHtml(total)}</td>
-            <td>${badge}</td>
+            <td data-status-cell="${escapeHtml(p.id)}">${renderStatusCell(p)}</td>
             <td data-threshold-cell="${escapeHtml(p.id)}">${renderThresholdCell(p)}</td>
             <td>
               <div class="admin-row-actions">
@@ -340,6 +361,48 @@
       tbody.querySelectorAll('.adjust-btn').forEach(btn => btn.addEventListener('click', () => openAdjust(btn.dataset.id)));
       tbody.querySelectorAll('.history-btn').forEach(btn => btn.addEventListener('click', () => openHistory(btn.dataset.id)));
       tbody.querySelectorAll('.stock-threshold-display').forEach(el => el.addEventListener('click', () => beginThresholdEdit(el.dataset.id)));
+      tbody.querySelectorAll('.stock-status-display').forEach(el => el.addEventListener('click', () => beginStatusEdit(el.dataset.id)));
+    }
+
+    const INVENTORY_STATUS_OPTIONS = [
+      { value: 'normal', label: 'Normal (auto from stock count)' },
+      { value: 'pre_order', label: 'Pre-order (customers can buy while empty)' },
+      { value: 'discontinued', label: 'Discontinued (never orderable)' },
+    ];
+
+    function beginStatusEdit(id) {
+      const p = products.find(x => String(x.id) === String(id));
+      if (!p) return;
+      const cell = document.querySelector(`[data-status-cell="${CSS.escape(id)}"]`);
+      if (!cell) return;
+      cell.innerHTML = `
+        <select class="form-input stock-status-input" id="status-input-${escapeHtml(id)}" style="font-size:12px;padding:4px 8px;">
+          ${INVENTORY_STATUS_OPTIONS.map(opt => `<option value="${opt.value}" ${p.inventoryStatus === opt.value ? 'selected' : ''}>${escapeHtml(opt.label)}</option>`).join('')}
+        </select>
+      `;
+      const select = document.getElementById(`status-input-${id}`);
+      select.focus();
+      const commit = async () => {
+        const val = select.value;
+        if (val === p.inventoryStatus) {
+          renderTable();
+          return;
+        }
+        try {
+          const data = await apiFetch(`/api/admin/inventory/${encodeURIComponent(id)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ inventoryStatus: val })
+          });
+          applyUpdatedProduct(data.product);
+          showToast('Stock status updated');
+          renderTable();
+        } catch (err) {
+          showBanner(err.message, 'error');
+          renderTable();
+        }
+      };
+      select.addEventListener('change', commit);
+      select.addEventListener('blur', () => renderTable());
     }
 
     function beginThresholdEdit(id) {

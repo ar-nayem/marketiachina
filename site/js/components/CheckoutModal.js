@@ -3,6 +3,7 @@ import { langState } from '../state/langState.js';
 import { cartState } from '../state/cartState.js';
 import { authState } from '../state/authState.js';
 import { settingsState } from '../state/settingsState.js';
+import { productsData } from '../data/products.js';
 import confetti from '../vendor/confetti/confetti.module.mjs';
 import { fireEmojiBurst } from './EmojiBurst.js';
 
@@ -46,6 +47,20 @@ export class CheckoutModal {
 
   getSelectedMethod() {
     return this.paymentMethods.find((m) => m.key === this.selectedPayment) || null;
+  }
+
+  hasPreOrderItemInCart() {
+    return cartState.items.some(item => {
+      const prod = productsData.find(p => p.id === item.productId);
+      return prod && prod.stockStatus === 'pre_order';
+    });
+  }
+
+  hasSoldOutItemInCart() {
+    return cartState.items.some(item => {
+      const prod = productsData.find(p => p.id === item.productId);
+      return prod && (prod.stockStatus === 'out_of_stock' || prod.stockStatus === 'discontinued');
+    });
   }
 
   render() {
@@ -148,6 +163,10 @@ export class CheckoutModal {
               ${totals.finalTotalFormatted}
             </div>
           </div>
+
+          ${this.hasPreOrderItemInCart() ? `
+            <div class="text-xs font-semibold px-3 py-2 rounded-lg bg-amber-500/10 text-amber-600 border border-amber-500/20">⏳ ${t.checkout.preOrderNotice}</div>
+          ` : ''}
 
           <!-- Submit -->
           <p id="checkout-error" class="text-xs text-center font-semibold text-[#DE2910] ${this.errorMessage ? '' : 'hidden'}">${this.errorMessage || ''}</p>
@@ -437,6 +456,13 @@ export class CheckoutModal {
     const address = formEl.querySelector('[name="customerAddress"]')?.value || '';
 
     this.errorMessage = '';
+
+    if (this.hasSoldOutItemInCart()) {
+      this.errorMessage = langState.t.cart.soldOutNotice;
+      this.render();
+      return;
+    }
+
     this.isSubmitting = true;
     this.render();
 

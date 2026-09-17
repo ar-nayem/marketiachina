@@ -63,6 +63,20 @@ export class ProductDetailModal {
     this.setupListeners();
   }
 
+  isSoldOut(prod) {
+    return prod.stockStatus === 'out_of_stock' || prod.stockStatus === 'discontinued';
+  }
+
+  renderStockNotice(prod, t) {
+    if (prod.stockStatus === 'pre_order') {
+      return `<div class="text-xs font-semibold px-3 py-2 rounded-lg bg-amber-500/10 text-amber-600 border border-amber-500/20">⏳ ${t.products.preOrderNote}</div>`;
+    }
+    if (this.isSoldOut(prod)) {
+      return `<div class="text-xs font-semibold px-3 py-2 rounded-lg bg-[var(--bg-tertiary)] text-[var(--text-muted)] border border-[var(--border-color)]">${t.products.soldOut}</div>`;
+    }
+    return '';
+  }
+
   render() {
     if (!this.activeProduct) {
       this.modalElement.className = "modal-overlay";
@@ -135,6 +149,8 @@ export class ProductDetailModal {
               <span class="text-sm text-[var(--text-muted)]">($${prod.priceUSD} / ¥${prod.priceCNY})</span>
             </div>
 
+            ${this.renderStockNotice(prod, t)}
+
             <p class="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
               ${desc}
             </p>
@@ -179,10 +195,16 @@ export class ProductDetailModal {
                   <button id="modal-inc-qty" class="w-9 h-9 flex items-center justify-center font-bold hover:text-[#DE2910]">+</button>
                 </div>
 
-                <button id="modal-add-cart-btn" class="flex-1 btn-primary py-2.5 text-xs rounded-lg flex items-center justify-center gap-2">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                  <span>${t.products.addToCart}</span>
-                </button>
+                ${this.isSoldOut(prod) ? `
+                  <button class="flex-1 btn-secondary py-2.5 text-xs rounded-lg flex items-center justify-center gap-2 opacity-60 cursor-not-allowed" disabled>
+                    <span>${t.products.soldOut}</span>
+                  </button>
+                ` : `
+                  <button id="modal-add-cart-btn" class="flex-1 btn-primary py-2.5 text-xs rounded-lg flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    <span>${prod.stockStatus === 'pre_order' ? t.products.preOrder : t.products.addToCart}</span>
+                  </button>
+                `}
               </div>
 
               <a href="https://wa.me/8801312965171?text=${encodeURIComponent(`Inquiry for ${name}`)}" target="_blank" class="w-full btn-secondary py-2.5 text-xs rounded-lg flex items-center justify-center gap-2 border-emerald-500/40 text-emerald-600 dark:text-emerald-400">

@@ -21,6 +21,10 @@ class CartStateManager {
   addItem(productId, quantity = 1, options = {}) {
     const product = productsData.find(p => p.id === productId);
     if (!product) return;
+    // Defense in depth - the Add to Cart / Pre-Order button is already
+    // disabled/relabeled based on stockStatus, but this guard keeps a stale
+    // UI (item sold out while a modal was still open) from adding it anyway.
+    if (product.stockStatus === 'out_of_stock' || product.stockStatus === 'discontinued') return;
 
     const existingIndex = this.items.findIndex(item => item.productId === productId);
     if (existingIndex > -1) {

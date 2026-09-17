@@ -83,7 +83,11 @@ export const en = {
     tier1: "1–99 pcs",
     tier2: "100–499 pcs",
     tier3: "500+ pcs",
-    discount: "OFF"
+    discount: "OFF",
+    soldOut: "Sold Out",
+    preOrder: "Pre-Order",
+    preOrderBadge: "Pre-Order",
+    preOrderNote: "Currently out of stock — ships once restocked."
   },
 
   logistics: {
@@ -207,7 +211,9 @@ export const en = {
     promoError: "Invalid promo code",
     total: "Grand Total",
     checkoutBtn: "Proceed to Checkout",
-    continueShopping: "Continue Shopping"
+    continueShopping: "Continue Shopping",
+    soldOutNotice: "Remove sold-out item(s) below to continue.",
+    preOrderNotice: "Includes pre-order item(s) - these ship once restocked."
   },
 
   checkout: {
@@ -221,6 +227,7 @@ export const en = {
     paymentMethod: "Select Payment Method",
     noActiveMethods: "No payment methods are currently available. Please contact support.",
     orderSummary: "Order Summary",
+    preOrderNotice: "This order includes pre-order item(s) - they will ship once restocked.",
     placeOrder: "Confirm Order (Total: ",
     successTitle: "🎉 Order Successfully Placed!",
     successDesc: "Our China logistics coordinator will contact you via WhatsApp with the tracking docket and commercial invoice.",

@@ -104,6 +104,7 @@ function runMigrations(db) {
 
   // j. Add new columns to products idempotently (Phase 3: inventory tracking).
   const inventoryColumns = new Set(db.prepare('PRAGMA table_info(products)').all().map((col) => col.name));
+  const inventoryColumnsIsNew = !inventoryColumns.has('bd_stock');
   const inventoryColumnsToAdd = [
     ['bd_stock', 'INTEGER NOT NULL DEFAULT 0'],
     ['cn_stock', 'INTEGER NOT NULL DEFAULT 0'],
@@ -117,6 +118,16 @@ function runMigrations(db) {
     if (!inventoryColumns.has(columnName)) {
       db.exec(`ALTER TABLE products ADD COLUMN ${columnName} ${columnDef}`);
     }
+  }
+  if (inventoryColumnsIsNew) {
+    // One-time backfill: before this migration, products had no numeric stock
+    // count at all (just is_active/status) - bd_stock/cn_stock default to 0,
+    // and orders.routes.js now rejects checkout on out_of_stock. Without this,
+    // every already-published product would go unbuyable the moment this
+    // migration runs. Give existing published products a working default;
+    // draft/archived products correctly stay at 0. Admin corrects real counts
+    // via the Inventory page afterwards.
+    db.exec(`UPDATE products SET bd_stock = 100 WHERE status = 'published'`);
   }
 
   // k. One-time backfill: give every existing order a starting timeline entry

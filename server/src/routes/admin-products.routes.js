@@ -10,7 +10,19 @@ const router = express.Router();
 // isActive, since admin views need to see and manage inactive products too)
 // from a products row plus its related product_specs / product_wholesale_tiers /
 // product_media rows.
-function buildProduct(row, specRows, tierRows, mediaRows, reviewSummary) {
+// Columns like variant1_values / highlights_en are stored as JSON text -
+// tolerate null/garbage rather than throwing, since a hand-edited DB row or
+// a pre-migration NULL must never 500 the whole products list.
+function parseJsonColumn(raw, fallback) {
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function buildProduct(row, specRows, tierRows, mediaRows, variantRows, reviewSummary) {
   const specs = { bn: [], en: [], zh: [] };
   for (const s of specRows) {
     if (specs[s.lang]) specs[s.lang].push({ label: s.label, value: s.value });
@@ -26,6 +38,18 @@ function buildProduct(row, specRows, tierRows, mediaRows, reviewSummary) {
   }));
 
   const media = mediaRows.map((m) => ({ url: m.url, type: m.media_type }));
+
+  const variants = variantRows.map((v) => ({
+    id: v.id,
+    variant1Value: v.variant1_value,
+    variant2Value: v.variant2_value,
+    price: v.price,
+    specialPrice: v.special_price,
+    stock: v.stock,
+    sellerSku: v.seller_sku,
+    freeItems: v.free_items,
+    isAvailable: !!v.is_available
+  }));
 
   return {
     id: row.id,
@@ -58,7 +82,26 @@ function buildProduct(row, specRows, tierRows, mediaRows, reviewSummary) {
     tagline: { bn: row.tagline_bn, en: row.tagline_en, zh: row.tagline_zh },
     description: { bn: row.description_bn, en: row.description_en, zh: row.description_zh },
     specs,
-    media
+    media,
+    brand: row.brand,
+    variant1Name: row.variant1_name,
+    variant1Values: parseJsonColumn(row.variant1_values, []),
+    variant2Name: row.variant2_name,
+    variant2Values: parseJsonColumn(row.variant2_values, []),
+    variants,
+    highlights: {
+      bn: parseJsonColumn(row.highlights_bn, []),
+      en: parseJsonColumn(row.highlights_en, []),
+      zh: parseJsonColumn(row.highlights_zh, [])
+    },
+    whatsInBox: { bn: row.whats_in_box_bn, en: row.whats_in_box_en, zh: row.whats_in_box_zh },
+    packageWeightKg: row.package_weight_kg,
+    packageLengthCm: row.package_length_cm,
+    packageWidthCm: row.package_width_cm,
+    packageHeightCm: row.package_height_cm,
+    hasDangerousGoods: !!row.has_dangerous_goods,
+    promoLongImageUrl: row.promo_long_image_url,
+    promoWhiteBgImageUrl: row.promo_white_bg_image_url
   };
 }
 
@@ -82,6 +125,15 @@ function getMediaRows(productId) {
     .all(productId);
 }
 
+function getVariantRows(productId) {
+  return db
+    .prepare(
+      `SELECT id, variant1_value, variant2_value, price, special_price, stock, seller_sku, free_items, is_available
+       FROM product_variants WHERE product_id = ? ORDER BY sort_order ASC`
+    )
+    .all(productId);
+}
+
 function getReviewSummary(productId) {
   const row = db
     .prepare(`SELECT COUNT(*) AS c, AVG(rating) AS avg_rating FROM reviews WHERE product_id = ? AND status = 'approved'`)
@@ -93,7 +145,14 @@ function getReviewSummary(productId) {
 }
 
 function loadFullProduct(row) {
-  return buildProduct(row, getSpecRows(row.id), getTierRows(row.id), getMediaRows(row.id), getReviewSummary(row.id));
+  return buildProduct(
+    row,
+    getSpecRows(row.id),
+    getTierRows(row.id),
+    getMediaRows(row.id),
+    getVariantRows(row.id),
+    getReviewSummary(row.id)
+  );
 }
 
 function replaceSpecs(productId, specsByLang) {
@@ -138,6 +197,29 @@ function replaceMedia(productId, mediaArray) {
   });
 }
 
+function replaceVariants(productId, variantsArray) {
+  db.prepare(`DELETE FROM product_variants WHERE product_id = ?`).run(productId);
+  const insertVariant = db.prepare(
+    `INSERT INTO product_variants (
+      product_id, variant1_value, variant2_value, price, special_price, stock, seller_sku, free_items, is_available, sort_order
+    ) VALUES (?,?,?,?,?,?,?,?,?,?)`
+  );
+  (variantsArray || []).forEach((v, idx) => {
+    insertVariant.run(
+      productId,
+      v.variant1Value ?? null,
+      v.variant2Value ?? null,
+      v.price ?? null,
+      v.specialPrice ?? null,
+      v.stock ?? 0,
+      v.sellerSku ?? null,
+      v.freeItems ?? 0,
+      v.isAvailable === false ? 0 : 1,
+      idx
+    );
+  });
+}
+
 router.get('/', requirePermission('products.view'), (req, res) => {
   const rows = db.prepare(`SELECT * FROM products ORDER BY rowid ASC`).all();
   res.json({ products: rows.map(loadFullProduct) });
@@ -171,6 +253,8 @@ router.post('/', requirePermission('products.create'), (req, res) => {
 
   const tagline = body.tagline || {};
   const description = body.description || {};
+  const highlights = body.highlights || {};
+  const whatsInBox = body.whatsInBox || {};
   const id = crypto.randomUUID();
 
   db.prepare(
@@ -180,8 +264,14 @@ router.post('/', requirePermission('products.create'), (req, res) => {
       rating, reviews_count, price_bdt, price_usd, price_cny, moq, origin_city,
       shipping_methods, lead_time_air, lead_time_sea,
       name_bn, name_en, name_zh, tagline_bn, tagline_en, tagline_zh,
-      description_bn, description_en, description_zh
-    ) VALUES (?,?,?,?,?,?,?,?, ?,?, ?,?,?,?,?,?,?, ?,?,?, ?,?,?, ?,?,?, ?,?,?)`
+      description_bn, description_en, description_zh,
+      brand, variant1_name, variant1_values, variant2_name, variant2_values,
+      highlights_bn, highlights_en, highlights_zh,
+      whats_in_box_bn, whats_in_box_en, whats_in_box_zh,
+      package_weight_kg, package_length_cm, package_width_cm, package_height_cm, has_dangerous_goods,
+      promo_long_image_url, promo_white_bg_image_url
+    ) VALUES (?,?,?,?,?,?,?,?, ?,?, ?,?,?,?,?,?,?, ?,?,?, ?,?,?, ?,?,?, ?,?,?,
+      ?,?,?,?,?, ?,?,?, ?,?,?, ?,?,?,?,?, ?,?)`
   ).run(
     id,
     body.category,
@@ -211,12 +301,31 @@ router.post('/', requirePermission('products.create'), (req, res) => {
     tagline.zh ?? null,
     description.bn ?? null,
     description.en ?? null,
-    description.zh ?? null
+    description.zh ?? null,
+    body.brand ?? null,
+    body.variant1Name ?? null,
+    JSON.stringify(body.variant1Values || []),
+    body.variant2Name ?? null,
+    JSON.stringify(body.variant2Values || []),
+    JSON.stringify(highlights.bn || []),
+    JSON.stringify(highlights.en || []),
+    JSON.stringify(highlights.zh || []),
+    whatsInBox.bn ?? null,
+    whatsInBox.en ?? null,
+    whatsInBox.zh ?? null,
+    body.packageWeightKg ?? null,
+    body.packageLengthCm ?? null,
+    body.packageWidthCm ?? null,
+    body.packageHeightCm ?? null,
+    body.hasDangerousGoods ? 1 : 0,
+    body.promoLongImageUrl ?? null,
+    body.promoWhiteBgImageUrl ?? null
   );
 
   replaceSpecs(id, body.specs || {});
   replaceTiers(id, body.wholesaleTiers || []);
   if (body.media !== undefined) replaceMedia(id, body.media || []);
+  if (body.variants !== undefined) replaceVariants(id, body.variants || []);
 
   const row = db.prepare(`SELECT * FROM products WHERE id = ?`).get(id);
 
@@ -280,6 +389,28 @@ router.put('/:id', requirePermission('products.edit'), (req, res) => {
   if (body.shippingMethods !== undefined) set('shipping_methods', JSON.stringify(body.shippingMethods || []));
   if (body.leadTimeAir !== undefined) set('lead_time_air', body.leadTimeAir);
   if (body.leadTimeSea !== undefined) set('lead_time_sea', body.leadTimeSea);
+  if (body.brand !== undefined) set('brand', body.brand);
+  if (body.variant1Name !== undefined) set('variant1_name', body.variant1Name);
+  if (body.variant1Values !== undefined) set('variant1_values', JSON.stringify(body.variant1Values || []));
+  if (body.variant2Name !== undefined) set('variant2_name', body.variant2Name);
+  if (body.variant2Values !== undefined) set('variant2_values', JSON.stringify(body.variant2Values || []));
+  if (body.whatsInBox !== undefined) {
+    if (body.whatsInBox.bn !== undefined) set('whats_in_box_bn', body.whatsInBox.bn);
+    if (body.whatsInBox.en !== undefined) set('whats_in_box_en', body.whatsInBox.en);
+    if (body.whatsInBox.zh !== undefined) set('whats_in_box_zh', body.whatsInBox.zh);
+  }
+  if (body.highlights !== undefined) {
+    if (body.highlights.bn !== undefined) set('highlights_bn', JSON.stringify(body.highlights.bn || []));
+    if (body.highlights.en !== undefined) set('highlights_en', JSON.stringify(body.highlights.en || []));
+    if (body.highlights.zh !== undefined) set('highlights_zh', JSON.stringify(body.highlights.zh || []));
+  }
+  if (body.packageWeightKg !== undefined) set('package_weight_kg', body.packageWeightKg);
+  if (body.packageLengthCm !== undefined) set('package_length_cm', body.packageLengthCm);
+  if (body.packageWidthCm !== undefined) set('package_width_cm', body.packageWidthCm);
+  if (body.packageHeightCm !== undefined) set('package_height_cm', body.packageHeightCm);
+  if (body.hasDangerousGoods !== undefined) set('has_dangerous_goods', body.hasDangerousGoods ? 1 : 0);
+  if (body.promoLongImageUrl !== undefined) set('promo_long_image_url', body.promoLongImageUrl);
+  if (body.promoWhiteBgImageUrl !== undefined) set('promo_white_bg_image_url', body.promoWhiteBgImageUrl);
 
   if (body.name !== undefined) {
     if (body.name.bn !== undefined) set('name_bn', body.name.bn);
@@ -310,6 +441,7 @@ router.put('/:id', requirePermission('products.edit'), (req, res) => {
   if (body.specs !== undefined) replaceSpecs(req.params.id, body.specs || {});
   if (body.wholesaleTiers !== undefined) replaceTiers(req.params.id, body.wholesaleTiers || []);
   if (body.media !== undefined) replaceMedia(req.params.id, body.media || []);
+  if (body.variants !== undefined) replaceVariants(req.params.id, body.variants || []);
 
   const row = db.prepare(`SELECT * FROM products WHERE id = ?`).get(req.params.id);
 

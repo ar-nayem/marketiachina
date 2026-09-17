@@ -127,7 +127,10 @@ function renderTable() {
     .map(
       (o) => `
         <tr data-order-row="${o.id}">
-          <td><strong>${escapeHtml(o.orderNumber)}</strong></td>
+          <td>
+            <strong>${escapeHtml(o.orderNumber)}</strong>
+            ${o.hasPreOrderItems ? `<span class="admin-badge admin-badge-gold" style="margin-left:6px;">Pre-order</span>` : ''}
+          </td>
           <td>
             ${escapeHtml(o.customerName)}
             <div style="color:var(--text-muted);font-size:11px;">${escapeHtml(o.customerEmail)}</div>
@@ -257,9 +260,13 @@ function renderOrderDetail() {
           const qty = pick(it, 'quantity');
           const unit = pick(it, 'unitPriceBdt', 'unit_price_bdt');
           const lineTotal = pick(it, 'lineTotalBdt', 'line_total_bdt');
+          const isPreOrder = !!(it.isPreOrder ?? it.is_pre_order);
           return `
             <tr>
-              <td>${escapeHtml(name)}</td>
+              <td>
+                ${escapeHtml(name)}
+                ${isPreOrder ? `<span class="admin-badge admin-badge-gold" style="margin-left:6px;">Pre-order</span>` : ''}
+              </td>
               <td>${escapeHtml(String(qty))}</td>
               <td>${money(unit)}</td>
               <td>${money(lineTotal)}</td>

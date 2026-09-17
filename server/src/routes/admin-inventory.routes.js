@@ -2,6 +2,7 @@ const express = require('express');
 const { db } = require('../db');
 const { requirePermission } = require('../middleware/requirePermission');
 const { logActivity } = require('../lib/activityLog');
+const { computeStockStatus } = require('../lib/stock');
 
 const router = express.Router();
 
@@ -14,18 +15,6 @@ const VALID_INVENTORY_STATUSES = ['normal', 'pre_order', 'discontinued'];
 // its quantity means something different (see the /:productId/adjust route).
 const INCREASE_CHANGE_TYPES = new Set(['add', 'transfer_in', 'returned']);
 const DECREASE_CHANGE_TYPES = new Set(['remove', 'transfer_out', 'damaged']);
-
-// Pure helper: derives the display-only stock status from a products row.
-// Never stored - always recomputed on read from bd_stock/cn_stock/low_stock_threshold/inventory_status.
-function computeStockStatus(row) {
-  if (row.inventory_status === 'pre_order' || row.inventory_status === 'discontinued') {
-    return row.inventory_status;
-  }
-  const total = (row.bd_stock || 0) + (row.cn_stock || 0);
-  if (total <= 0) return 'out_of_stock';
-  if (total <= row.low_stock_threshold) return 'low_stock';
-  return 'in_stock';
-}
 
 function toListItem(row) {
   return {

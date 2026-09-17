@@ -49,7 +49,8 @@
       align-items: center;
       gap: 8px;
     }
-    .admin-checkbox-row input[type="checkbox"] {
+    .admin-checkbox-row input[type="checkbox"],
+    .admin-checkbox-row input[type="radio"] {
       width: 16px;
       height: 16px;
       accent-color: var(--mc-china-red);
@@ -67,6 +68,10 @@
       line-height: 1.5;
       resize: vertical;
     }
+    textarea.form-input.prose {
+      font-family: inherit;
+      font-size: 13px;
+    }
     .admin-field-hint {
       font-size: 11px;
       color: var(--text-muted);
@@ -77,6 +82,10 @@
       font-size: 12px;
       margin-top: 4px;
       min-height: 14px;
+    }
+    .admin-required::before {
+      content: '* ';
+      color: var(--mc-china-red);
     }
     .admin-inline-banner {
       display: none;
@@ -107,57 +116,111 @@
       pointer-events: none;
     }
     .admin-toast.show { opacity: 1; transform: translateY(0); }
-    .admin-dropzone {
-      border: 1.5px dashed var(--border-color);
-      border-radius: var(--radius-sm);
-      padding: 20px;
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 13px;
-      cursor: pointer;
-      transition: border-color 0.15s ease, background 0.15s ease;
-    }
-    .admin-dropzone:hover,
-    .admin-dropzone.dragover {
-      border-color: var(--mc-china-red);
-      background: var(--bg-tertiary);
-    }
-    .admin-media-strip {
+
+    /* --- Two-column layout: form + Content Score sidebar --- */
+    .product-form-layout {
       display: flex;
-      gap: 10px;
+      align-items: flex-start;
+      gap: 20px;
+    }
+    .product-form-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .product-form-sidebar {
+      width: 280px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: sticky;
+      top: 84px;
+    }
+    @media (max-width: 960px) {
+      .product-form-layout { flex-direction: column; }
+      .product-form-sidebar { width: 100%; position: static; }
+    }
+
+    /* --- Recently used category chips --- */
+    .admin-chip-row {
+      display: flex;
       flex-wrap: wrap;
-      margin-top: 12px;
+      gap: 6px;
+      margin-top: 8px;
     }
-    .admin-media-item {
-      position: relative;
-      width: 64px;
-    }
-    .admin-media-thumb {
-      width: 64px;
-      height: 64px;
-      object-fit: cover;
-      border-radius: var(--radius-sm);
-      background: var(--bg-tertiary);
-      display: block;
+    .admin-chip {
       border: 1px solid var(--border-color);
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+    }
+    .admin-chip:hover { border-color: var(--mc-china-red); color: var(--mc-china-red); }
+
+    /* --- Image tile grid (Product Images / Buyer Promotion Image) --- */
+    .admin-image-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .admin-image-tile {
+      width: 84px;
+      height: 84px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background: var(--bg-tertiary);
+      position: relative;
+      overflow: hidden;
+    }
+    .admin-image-tile img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .admin-image-add-tile {
+      width: 84px;
+      height: 84px;
+      border-radius: var(--radius-sm);
+      border: 1.5px dashed var(--border-color);
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      color: var(--text-muted);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: border-color 0.15s ease, color 0.15s ease;
+    }
+    .admin-image-add-tile:hover,
+    .admin-image-add-tile.dragover {
+      border-color: var(--mc-china-red);
+      color: var(--mc-china-red);
     }
     .admin-media-primary-badge {
       position: absolute;
-      top: -6px;
-      left: -6px;
+      top: 3px;
+      left: 3px;
       font-size: 9px;
       padding: 1px 6px;
     }
     .admin-media-remove-btn {
       position: absolute;
-      top: -6px;
-      right: -6px;
+      top: 3px;
+      right: 3px;
       width: 18px;
       height: 18px;
       border-radius: 50%;
-      border: 1px solid var(--border-color);
-      background: var(--bg-card);
-      color: var(--mc-china-red);
+      border: none;
+      background: rgba(0,0,0,0.55);
+      color: #fff;
       font-size: 10px;
       line-height: 1;
       cursor: pointer;
@@ -167,27 +230,38 @@
       padding: 0;
     }
     .admin-media-reorder {
+      position: absolute;
+      bottom: 3px;
+      right: 3px;
       display: flex;
-      justify-content: center;
-      gap: 4px;
-      margin-top: 4px;
+      gap: 2px;
     }
     .admin-media-reorder button {
-      width: 20px;
-      height: 16px;
-      font-size: 9px;
+      width: 16px;
+      height: 14px;
+      font-size: 8px;
       line-height: 1;
-      border: 1px solid var(--border-color);
-      border-radius: 3px;
-      background: var(--bg-card);
-      color: var(--text-secondary);
+      border: none;
+      border-radius: 2px;
+      background: rgba(0,0,0,0.55);
+      color: #fff;
       cursor: pointer;
       padding: 0;
     }
-    .admin-media-reorder button:disabled {
-      opacity: 0.3;
-      cursor: default;
+    .admin-media-reorder button:disabled { opacity: 0.3; cursor: default; }
+
+    .admin-promo-slots {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
     }
+    .admin-promo-slot-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
     .admin-profit-display {
       border: 1px solid var(--border-color);
       border-radius: var(--radius-sm);
@@ -198,9 +272,74 @@
       color: var(--text-primary);
       margin-top: 4px;
     }
-    .product-form-page {
-      max-width: 760px;
+
+    /* --- Variant tag input (Color Family / Size values) --- */
+    .admin-variant-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
     }
+    .admin-variant-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-full);
+      padding: 3px 6px 3px 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .admin-variant-tag button {
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1;
+      padding: 2px;
+    }
+    .admin-variant-tag button:hover { color: var(--mc-china-red); }
+
+    .admin-variants-table-wrap { overflow-x: auto; margin-top: 12px; }
+    .admin-variants-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .admin-variants-table th {
+      text-align: left;
+      padding: 8px 10px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--text-muted);
+      background: var(--bg-tertiary);
+      white-space: nowrap;
+    }
+    .admin-variants-table td {
+      padding: 6px 10px;
+      border-top: 1px solid var(--border-color);
+      vertical-align: middle;
+    }
+    .admin-variants-table input[type="text"],
+    .admin-variants-table input[type="number"] {
+      width: 100%;
+      min-width: 70px;
+      padding: 6px 8px;
+      font-size: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
+    .admin-no-variants-note {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: var(--bg-tertiary);
+      border-radius: var(--radius-sm);
+    }
+
     .product-form-actions {
       display: flex;
       align-items: center;
@@ -220,8 +359,107 @@
       margin-bottom: 6px;
     }
     .admin-topbar-back:hover { color: var(--mc-china-red); }
+
+    details.admin-lang-more { margin-top: 10px; }
+    details.admin-lang-more > summary {
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--mc-china-red);
+      list-style: none;
+    }
+    details.admin-lang-more > summary::-webkit-details-marker { display: none; }
+    details.admin-lang-more[open] > summary { margin-bottom: 10px; }
+    details.admin-lang-more > div { display: flex; flex-direction: column; gap: 10px; }
+
+    /* --- Content Score sidebar panel --- */
+    .content-score-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 18px;
+    }
+    .content-score-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+    .content-score-bar-track {
+      height: 6px;
+      border-radius: var(--radius-full);
+      background: var(--bg-tertiary);
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+    .content-score-bar-fill {
+      height: 100%;
+      background: var(--mc-china-red);
+      transition: width 0.3s ease;
+    }
+    .content-score-label {
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 14px;
+    }
+    .content-score-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 6px 0;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .content-score-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid var(--border-color);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .content-score-item.done .content-score-dot {
+      background: #10A34A;
+      border-color: #10A34A;
+    }
+    .content-score-item.active .content-score-dot {
+      background: var(--mc-china-red);
+      border-color: var(--mc-china-red);
+    }
+    .content-score-hints {
+      margin: 2px 0 4px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .content-score-hint {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--mc-gold, #b8860b);
+    }
+    .content-score-tips {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 18px;
+    }
+    .content-score-tips h3 {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--mc-china-red);
+      margin-bottom: 8px;
+    }
+    .content-score-tips p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
     @media (max-width: 640px) {
       .admin-form-row { flex-direction: column; }
+      .admin-promo-slots { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -235,201 +473,340 @@
         </div>
       </div>
       <div class="admin-content">
-        <div class="admin-panel product-form-page">
-          <div id="admin-banner" class="admin-inline-banner"></div>
+        <div id="admin-banner" class="admin-inline-banner"></div>
 
-          <form id="product-form" style="padding:20px;">
-            <div id="field-id-wrap" style="display:none;">
-              <label class="form-label">ID</label>
-              <input class="form-input" id="f-id" type="text" readonly />
-            </div>
+        <form id="product-form" class="product-form-layout">
+          <div class="product-form-main">
 
-            <div class="admin-form-section-title first">Basic Info</div>
-            <div class="admin-form-row">
-              <div>
-                <label class="form-label">Category</label>
+            <!-- Basic Information -->
+            <div class="admin-panel">
+              <div class="admin-panel-header"><h2>Basic Information</h2></div>
+              <div style="padding:20px;">
+                <div id="field-id-wrap" style="display:none;">
+                  <label class="form-label">ID</label>
+                  <input class="form-input" id="f-id" type="text" readonly />
+                </div>
+
+                <label class="form-label admin-required">Product Name</label>
+                <div class="admin-field-hint">Multiple language titles show when buyers change their app's language setting. Filling these in improves product recall in other-language markets.</div>
+                <input class="form-input" id="f-name-en" type="text" placeholder="Ex. Nikon Coolpix A300 Digital Camera" maxlength="255" style="margin-top:8px;" />
+                <details class="admin-lang-more">
+                  <summary>Other languages (Bengali / Chinese)</summary>
+                  <div>
+                    <div>
+                      <label class="form-label">Name (Bengali)</label>
+                      <input class="form-input" id="f-name-bn" type="text" />
+                    </div>
+                    <div>
+                      <label class="form-label">Name (Chinese)</label>
+                      <input class="form-input" id="f-name-zh" type="text" />
+                    </div>
+                  </div>
+                </details>
+
+                <div class="admin-form-section-title">Category</div>
                 <select class="form-input" id="f-category"></select>
-              </div>
-              <div>
-                <label class="form-label">Status</label>
+                <div id="recent-categories-wrap" style="display:none;">
+                  <span class="admin-field-hint">Recently used:</span>
+                  <div class="admin-chip-row" id="recent-categories"></div>
+                </div>
+
+                <div class="admin-form-section-title">Status</div>
                 <select class="form-input" id="f-status">
                   <option value="draft">Draft</option>
                   <option value="published">Published</option>
                   <option value="archived">Archived</option>
                 </select>
-              </div>
-            </div>
-            <div>
-              <label class="form-label">Media (images / videos)</label>
-              <div class="admin-dropzone" id="media-dropzone">
-                Drag &amp; drop images or videos here, or click to browse
+
+                <div class="admin-form-section-title admin-required">Product Images</div>
+                <div class="admin-field-hint">Drag &amp; drop, or click the + tile to browse. mp4 video up to 60s / 100MB is also accepted here. The first item becomes the primary image.</div>
+                <div class="admin-image-grid" id="media-strip" style="margin-top:10px;">
+                  <div class="admin-image-add-tile" id="media-dropzone">+</div>
+                </div>
                 <input type="file" id="media-file-input" accept="image/*,video/mp4,video/webm" multiple style="display:none;" />
-              </div>
-              <div class="admin-field-hint">The first image will be used as the primary product/marketing image.</div>
-              <div class="admin-field-error" id="err-media"></div>
-              <div class="admin-media-strip" id="media-strip"></div>
-            </div>
-            <div>
-              <label class="form-label">3D Model Type</label>
-              <input class="form-input" id="f-model3dType" type="text" placeholder="e.g. headphones, watch, keyboard" />
-            </div>
-            <div class="admin-checkbox-group">
-              <div class="admin-checkbox-row">
-                <input type="checkbox" id="f-isFeatured" />
-                <label for="f-isFeatured">Featured</label>
-              </div>
-              <div class="admin-checkbox-row">
-                <input type="checkbox" id="f-isFactoryDirect" />
-                <label for="f-isFactoryDirect">Factory Direct</label>
+                <div class="admin-field-error" id="err-media"></div>
+
+                <div class="admin-form-section-title">Buyer Promotion Image</div>
+                <div class="admin-promo-slots">
+                  <div>
+                    <div class="admin-image-add-tile" id="promo-long-dropzone"><span id="promo-long-plus">+</span></div>
+                    <div class="admin-promo-slot-label">Long Image</div>
+                    <input type="file" id="promo-long-input" accept="image/*" style="display:none;" />
+                  </div>
+                  <div>
+                    <div class="admin-image-add-tile" id="promo-white-dropzone"><span id="promo-white-plus">+</span></div>
+                    <div class="admin-promo-slot-label">White Background Image</div>
+                    <input type="file" id="promo-white-input" accept="image/*" style="display:none;" />
+                  </div>
+                </div>
+
+                <div class="admin-form-section-title">3D Model Type</div>
+                <input class="form-input" id="f-model3dType" type="text" placeholder="e.g. headphones, watch, keyboard" />
+
+                <div class="admin-checkbox-group" style="margin-top:14px;">
+                  <div class="admin-checkbox-row">
+                    <input type="checkbox" id="f-isFeatured" />
+                    <label for="f-isFeatured">Featured</label>
+                  </div>
+                  <div class="admin-checkbox-row">
+                    <input type="checkbox" id="f-isFactoryDirect" />
+                    <label for="f-isFactoryDirect">Factory Direct</label>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="admin-form-section-title">Rating</div>
-            <div class="admin-form-row">
-              <div>
-                <label class="form-label">Rating (0–5)</label>
-                <input class="form-input" id="f-rating" type="number" step="0.1" min="0" max="5" />
-              </div>
-              <div>
-                <label class="form-label">Reviews Count</label>
-                <input class="form-input" id="f-reviewsCount" type="number" step="1" min="0" />
+            <!-- Product Specification -->
+            <div class="admin-panel">
+              <div class="admin-panel-header"><h2>Product Specification</h2></div>
+              <div style="padding:20px;">
+                <label class="form-label admin-required">Brand</label>
+                <input class="form-input" id="f-brand" type="text" list="brand-options" placeholder="e.g. Nikon" />
+                <datalist id="brand-options"></datalist>
+
+                <details class="admin-lang-more">
+                  <summary>Show More (Rating &amp; detailed specs)</summary>
+                  <div>
+                    <div class="admin-form-row">
+                      <div>
+                        <label class="form-label">Rating (0-5)</label>
+                        <input class="form-input" id="f-rating" type="number" step="0.1" min="0" max="5" />
+                      </div>
+                      <div>
+                        <label class="form-label">Reviews Count</label>
+                        <input class="form-input" id="f-reviewsCount" type="number" step="1" min="0" />
+                      </div>
+                    </div>
+                    <div>
+                      <label class="form-label">Specs (Bengali) - array of {label, value}</label>
+                      <textarea class="form-input" id="f-specs-bn" placeholder='[{"label":"...","value":"..."}]'></textarea>
+                      <div class="admin-field-error" id="err-specs-bn"></div>
+                    </div>
+                    <div>
+                      <label class="form-label">Specs (English) - array of {label, value}</label>
+                      <textarea class="form-input" id="f-specs-en" placeholder='[{"label":"...","value":"..."}]'></textarea>
+                      <div class="admin-field-error" id="err-specs-en"></div>
+                    </div>
+                    <div>
+                      <label class="form-label">Specs (Chinese) - array of {label, value}</label>
+                      <textarea class="form-input" id="f-specs-zh" placeholder='[{"label":"...","value":"..."}]'></textarea>
+                      <div class="admin-field-error" id="err-specs-zh"></div>
+                    </div>
+                  </div>
+                </details>
               </div>
             </div>
 
-            <div class="admin-form-section-title">Pricing</div>
-            <div class="admin-form-row">
-              <div>
-                <label class="form-label">Price (BDT)</label>
-                <input class="form-input" id="f-priceBDT" type="number" step="0.01" min="0" />
+            <!-- Price, Stock & Variants -->
+            <div class="admin-panel">
+              <div class="admin-panel-header"><h2>Price, Stock &amp; Variants</h2></div>
+              <div style="padding:20px;">
+                <label class="form-label admin-required">Default Price &amp; Stock</label>
+                <div class="admin-field-hint">Used directly when the product has no variants, and as the fallback price shown before a buyer picks a variant.</div>
+                <div class="admin-form-row" style="margin-top:8px;">
+                  <div>
+                    <label class="form-label admin-required">Price (BDT)</label>
+                    <input class="form-input" id="f-priceBDT" type="number" step="0.01" min="0" />
+                  </div>
+                  <div>
+                    <label class="form-label">Price (USD)</label>
+                    <input class="form-input" id="f-priceUSD" type="number" step="0.01" min="0" />
+                  </div>
+                  <div>
+                    <label class="form-label">Price (CNY)</label>
+                    <input class="form-input" id="f-priceCNY" type="number" step="0.01" min="0" />
+                  </div>
+                  <div>
+                    <label class="form-label">Cost Price (BDT)</label>
+                    <input class="form-input" id="f-costPriceBDT" type="number" step="0.01" min="0" />
+                  </div>
+                </div>
+                <label class="form-label">Profit Margin</label>
+                <div class="admin-profit-display" id="profit-margin-display">-</div>
+
+                <div class="admin-form-row">
+                  <div>
+                    <label class="form-label">MOQ</label>
+                    <input class="form-input" id="f-moq" type="number" step="1" min="0" />
+                  </div>
+                  <div>
+                    <label class="form-label">Origin City</label>
+                    <input class="form-input" id="f-originCity" type="text" placeholder="e.g. Shenzhen, Guangdong" />
+                  </div>
+                </div>
+
+                <div class="admin-form-section-title">Variants</div>
+                <div class="admin-field-hint">Add up to two variant types (e.g. Color Family, Size). Leave both blank if this product has no variants.</div>
+
+                <label class="form-label" style="margin-top:10px;">Variant1 Name</label>
+                <input class="form-input" id="f-variant1-name" type="text" placeholder="e.g. Color Family" />
+                <label class="form-label">Variant1 Values</label>
+                <input class="form-input" id="f-variant1-input" type="text" placeholder="Type a value and press Enter (e.g. Red)" />
+                <div class="admin-variant-tags" id="variant1-tags"></div>
+
+                <label class="form-label" style="margin-top:14px;">Variant2 Name</label>
+                <input class="form-input" id="f-variant2-name" type="text" placeholder="e.g. Size" />
+                <label class="form-label">Variant2 Values</label>
+                <input class="form-input" id="f-variant2-input" type="text" placeholder="Type a value and press Enter (e.g. M)" />
+                <div class="admin-variant-tags" id="variant2-tags"></div>
+
+                <div id="variants-table-region"></div>
               </div>
-              <div>
-                <label class="form-label">Price (USD)</label>
-                <input class="form-input" id="f-priceUSD" type="number" step="0.01" min="0" />
-              </div>
-              <div>
-                <label class="form-label">Price (CNY)</label>
-                <input class="form-input" id="f-priceCNY" type="number" step="0.01" min="0" />
-              </div>
-              <div>
-                <label class="form-label">Cost Price (BDT)</label>
-                <input class="form-input" id="f-costPriceBDT" type="number" step="0.01" min="0" />
-              </div>
-            </div>
-            <div>
-              <label class="form-label">Profit Margin</label>
-              <div class="admin-profit-display" id="profit-margin-display">—</div>
             </div>
 
-            <div class="admin-form-section-title">Inventory &amp; Origin</div>
-            <div class="admin-form-row">
-              <div>
-                <label class="form-label">MOQ</label>
-                <input class="form-input" id="f-moq" type="number" step="1" min="0" />
+            <!-- Product Description -->
+            <div class="admin-panel">
+              <div class="admin-panel-header"><h2>Product Description</h2></div>
+              <div style="padding:20px;">
+                <label class="form-label admin-required">Main Description</label>
+                <textarea class="form-input prose" id="f-desc-en" placeholder="Please input" style="min-height:180px;"></textarea>
+                <details class="admin-lang-more">
+                  <summary>Other languages (Bengali / Chinese)</summary>
+                  <div>
+                    <div>
+                      <label class="form-label">Description (Bengali)</label>
+                      <textarea class="form-input prose" id="f-desc-bn"></textarea>
+                    </div>
+                    <div>
+                      <label class="form-label">Description (Chinese)</label>
+                      <textarea class="form-input prose" id="f-desc-zh"></textarea>
+                    </div>
+                  </div>
+                </details>
+
+                <div class="admin-form-section-title admin-required">Highlights</div>
+                <div class="admin-field-hint">One bullet per line.</div>
+                <textarea class="form-input prose" id="f-highlights-en" placeholder="Please input" style="margin-top:6px;"></textarea>
+                <details class="admin-lang-more">
+                  <summary>Other languages (Bengali / Chinese)</summary>
+                  <div>
+                    <div>
+                      <label class="form-label">Highlights (Bengali)</label>
+                      <textarea class="form-input prose" id="f-highlights-bn"></textarea>
+                    </div>
+                    <div>
+                      <label class="form-label">Highlights (Chinese)</label>
+                      <textarea class="form-input prose" id="f-highlights-zh"></textarea>
+                    </div>
+                  </div>
+                </details>
+
+                <div class="admin-form-section-title admin-required">What's in the Box</div>
+                <input class="form-input" id="f-whatsinbox-en" type="text" style="margin-top:6px;" />
+                <details class="admin-lang-more">
+                  <summary>Other languages (Bengali / Chinese)</summary>
+                  <div>
+                    <div>
+                      <label class="form-label">What's in the Box (Bengali)</label>
+                      <input class="form-input" id="f-whatsinbox-bn" type="text" />
+                    </div>
+                    <div>
+                      <label class="form-label">What's in the Box (Chinese)</label>
+                      <input class="form-input" id="f-whatsinbox-zh" type="text" />
+                    </div>
+                  </div>
+                </details>
+
+                <div class="admin-form-section-title">Tagline</div>
+                <input class="form-input" id="f-tagline-en" type="text" style="margin-top:6px;" />
+                <details class="admin-lang-more">
+                  <summary>Other languages (Bengali / Chinese)</summary>
+                  <div>
+                    <div>
+                      <label class="form-label">Tagline (Bengali)</label>
+                      <input class="form-input" id="f-tagline-bn" type="text" />
+                    </div>
+                    <div>
+                      <label class="form-label">Tagline (Chinese)</label>
+                      <input class="form-input" id="f-tagline-zh" type="text" />
+                    </div>
+                  </div>
+                </details>
               </div>
-              <div>
-                <label class="form-label">Origin City</label>
-                <input class="form-input" id="f-originCity" type="text" placeholder="e.g. Shenzhen, Guangdong" />
+            </div>
+
+            <!-- Shipping & Warranty -->
+            <div class="admin-panel">
+              <div class="admin-panel-header"><h2>Shipping &amp; Warranty</h2></div>
+              <div style="padding:20px;">
+                <div class="admin-checkbox-group">
+                  <div class="admin-checkbox-row">
+                    <input type="checkbox" id="f-shipAir" />
+                    <label for="f-shipAir">Air</label>
+                  </div>
+                  <div class="admin-checkbox-row">
+                    <input type="checkbox" id="f-shipSea" />
+                    <label for="f-shipSea">Sea</label>
+                  </div>
+                </div>
+                <div class="admin-form-row">
+                  <div>
+                    <label class="form-label">Lead Time (Air)</label>
+                    <input class="form-input" id="f-leadTimeAir" type="text" placeholder="e.g. 7-10 Days" />
+                  </div>
+                  <div>
+                    <label class="form-label">Lead Time (Sea)</label>
+                    <input class="form-input" id="f-leadTimeSea" type="text" placeholder="e.g. 40-50 Days" />
+                  </div>
+                </div>
+
+                <div class="admin-form-section-title admin-required">Package Weight</div>
+                <div class="admin-form-row">
+                  <div>
+                    <input class="form-input" id="f-package-weight" type="number" step="0.001" min="0.001" max="300" placeholder="0.001~300 (kg)" />
+                  </div>
+                </div>
+
+                <label class="form-label admin-required" style="margin-top:14px;">Package Length(cm) x Width(cm) x Height(cm)</label>
+                <div class="admin-form-row">
+                  <div><input class="form-input" id="f-package-length" type="number" step="0.01" min="0.01" max="300" placeholder="0.01~300" /></div>
+                  <div><input class="form-input" id="f-package-width" type="number" step="0.01" min="0.01" max="300" placeholder="0.01~300" /></div>
+                  <div><input class="form-input" id="f-package-height" type="number" step="0.01" min="0.01" max="300" placeholder="0.01~300" /></div>
+                </div>
+
+                <label class="form-label" style="margin-top:14px;">Dangerous Goods</label>
+                <div class="admin-checkbox-group">
+                  <div class="admin-checkbox-row">
+                    <input type="radio" name="f-dangerous" id="f-dangerous-none" value="none" checked />
+                    <label for="f-dangerous-none">None</label>
+                  </div>
+                  <div class="admin-checkbox-row">
+                    <input type="radio" name="f-dangerous" id="f-dangerous-yes" value="yes" />
+                    <label for="f-dangerous-yes">Contains battery / flammables / liquid</label>
+                  </div>
+                </div>
+
+                <div class="admin-form-section-title">Wholesale Tiers (JSON)</div>
+                <label class="form-label">Tiers (shared across languages)</label>
+                <textarea class="form-input" id="f-tiers" placeholder='[{"min":10,"max":49,"priceBDT":0,"priceUSD":0,"priceCNY":0,"discount":"0%"}]'></textarea>
+                <div class="admin-field-hint">Array of {min, max, priceBDT, priceUSD, priceCNY, discount}.</div>
+                <div class="admin-field-error" id="err-tiers"></div>
               </div>
             </div>
 
-            <div class="admin-form-section-title">Shipping</div>
-            <div class="admin-checkbox-group">
-              <div class="admin-checkbox-row">
-                <input type="checkbox" id="f-shipAir" />
-                <label for="f-shipAir">Air</label>
-              </div>
-              <div class="admin-checkbox-row">
-                <input type="checkbox" id="f-shipSea" />
-                <label for="f-shipSea">Sea</label>
-              </div>
+            <div class="admin-panel product-form-actions">
+              <button class="btn-primary" id="save-btn" type="submit">Submit</button>
+              <a href="/admin/products.html" class="btn-secondary" id="cancel-btn">Cancel</a>
             </div>
-            <div class="admin-form-row">
-              <div>
-                <label class="form-label">Lead Time (Air)</label>
-                <input class="form-input" id="f-leadTimeAir" type="text" placeholder="e.g. 7-10 Days" />
-              </div>
-              <div>
-                <label class="form-label">Lead Time (Sea)</label>
-                <input class="form-input" id="f-leadTimeSea" type="text" placeholder="e.g. 40-50 Days" />
-              </div>
-            </div>
-
-            <div class="admin-form-section-title">Product Name</div>
-            <div>
-              <label class="form-label">Name (Bengali)</label>
-              <input class="form-input" id="f-name-bn" type="text" />
-            </div>
-            <div>
-              <label class="form-label">Name (English)</label>
-              <input class="form-input" id="f-name-en" type="text" />
-            </div>
-            <div>
-              <label class="form-label">Name (Chinese)</label>
-              <input class="form-input" id="f-name-zh" type="text" />
-            </div>
-
-            <div class="admin-form-section-title">Tagline</div>
-            <div>
-              <label class="form-label">Tagline (Bengali)</label>
-              <input class="form-input" id="f-tagline-bn" type="text" />
-            </div>
-            <div>
-              <label class="form-label">Tagline (English)</label>
-              <input class="form-input" id="f-tagline-en" type="text" />
-            </div>
-            <div>
-              <label class="form-label">Tagline (Chinese)</label>
-              <input class="form-input" id="f-tagline-zh" type="text" />
-            </div>
-
-            <div class="admin-form-section-title">Description</div>
-            <div>
-              <label class="form-label">Description (Bengali)</label>
-              <input class="form-input" id="f-desc-bn" type="text" />
-            </div>
-            <div>
-              <label class="form-label">Description (English)</label>
-              <input class="form-input" id="f-desc-en" type="text" />
-            </div>
-            <div>
-              <label class="form-label">Description (Chinese)</label>
-              <input class="form-input" id="f-desc-zh" type="text" />
-            </div>
-
-            <div class="admin-form-section-title">Specifications (JSON)</div>
-            <div>
-              <label class="form-label">Specs (Bengali)</label>
-              <textarea class="form-input" id="f-specs-bn" placeholder='[{"label":"...","value":"..."}]'></textarea>
-              <div class="admin-field-hint">Array of {label, value} objects.</div>
-              <div class="admin-field-error" id="err-specs-bn"></div>
-            </div>
-            <div>
-              <label class="form-label">Specs (English)</label>
-              <textarea class="form-input" id="f-specs-en" placeholder='[{"label":"...","value":"..."}]'></textarea>
-              <div class="admin-field-hint">Array of {label, value} objects.</div>
-              <div class="admin-field-error" id="err-specs-en"></div>
-            </div>
-            <div>
-              <label class="form-label">Specs (Chinese)</label>
-              <textarea class="form-input" id="f-specs-zh" placeholder='[{"label":"...","value":"..."}]'></textarea>
-              <div class="admin-field-hint">Array of {label, value} objects.</div>
-              <div class="admin-field-error" id="err-specs-zh"></div>
-            </div>
-
-            <div class="admin-form-section-title">Wholesale Tiers (JSON)</div>
-            <div>
-              <label class="form-label">Tiers (shared across languages)</label>
-              <textarea class="form-input" id="f-tiers" placeholder='[{"min":10,"max":49,"priceBDT":0,"priceUSD":0,"priceCNY":0,"discount":"0%"}]'></textarea>
-              <div class="admin-field-hint">Array of {min, max, priceBDT, priceUSD, priceCNY, discount}.</div>
-              <div class="admin-field-error" id="err-tiers"></div>
-            </div>
-          </form>
-
-          <div class="product-form-actions">
-            <button class="btn-primary" id="save-btn" type="submit" form="product-form">Save Product</button>
-            <a href="/admin/products.html" class="btn-secondary" id="cancel-btn">Cancel</a>
           </div>
-        </div>
+
+          <!-- Content Score sidebar -->
+          <aside class="product-form-sidebar">
+            <div class="content-score-panel">
+              <div class="content-score-header">
+                <span>Content Score</span>
+                <span id="content-score-percent">0</span>
+              </div>
+              <div class="content-score-bar-track"><div class="content-score-bar-fill" id="content-score-bar" style="width:0%;"></div></div>
+              <div class="content-score-label" id="content-score-label" style="color:var(--mc-china-red);">Poor</div>
+              <div id="content-score-list"></div>
+            </div>
+            <div class="content-score-tips">
+              <h3>Tips</h3>
+              <p>Please make sure to upload product image(s), fill the product name, and select the correct category to publish a product.</p>
+            </div>
+          </aside>
+        </form>
       </div>
     </div>
   </div>
@@ -441,7 +818,13 @@
 
     const productId = new URLSearchParams(window.location.search).get('id');
     let categories = [];
+    let allProducts = [];
     let currentMedia = [];
+    let variant1Values = [];
+    let variant2Values = [];
+    let variantRows = [];
+    let promoLongImageUrl = null;
+    let promoWhiteBgImageUrl = null;
     // Guards against saving before an in-progress image upload has actually
     // attached to currentMedia - without this, clicking Save right after
     // selecting a photo (a very natural fast workflow) could submit before
@@ -458,6 +841,14 @@
       if (!path) return '';
       if (/^https?:\/\//i.test(path) || /^data:/i.test(path) || path.startsWith('/')) return path;
       return '/' + path.replace(/^\.?\//, '');
+    }
+
+    function parseLines(raw) {
+      return (raw || '').split('\n').map(s => s.trim()).filter(Boolean);
+    }
+
+    function variantKey(v1, v2) {
+      return `${v1 || ''} ${v2 || ''}`;
     }
 
     async function loadCategories() {
@@ -491,6 +882,32 @@
       sel.insertBefore(opt, sel.firstChild);
     }
 
+    function renderRecentCategories() {
+      const wrap = document.getElementById('recent-categories-wrap');
+      const holder = document.getElementById('recent-categories');
+      const recent = [];
+      for (let i = allProducts.length - 1; i >= 0 && recent.length < 3; i--) {
+        const slug = allProducts[i].category;
+        if (slug && !recent.includes(slug)) recent.push(slug);
+      }
+      if (!recent.length) { wrap.style.display = 'none'; return; }
+      wrap.style.display = '';
+      holder.innerHTML = recent.map(slug => {
+        const cat = categories.find(c => c.slug === slug);
+        const label = cat ? ((cat.name && cat.name.en) || cat.slug) : slug;
+        return `<button type="button" class="admin-chip" data-slug="${escapeHtml(slug)}">${escapeHtml(label)}</button>`;
+      }).join('');
+      holder.querySelectorAll('.admin-chip').forEach(btn => btn.addEventListener('click', () => {
+        ensureCategoryOption(btn.dataset.slug);
+        document.getElementById('f-category').value = btn.dataset.slug;
+      }));
+    }
+
+    function populateBrandOptions() {
+      const brands = [...new Set(allProducts.map(p => p.brand).filter(Boolean))].sort();
+      document.getElementById('brand-options').innerHTML = brands.map(b => `<option value="${escapeHtml(b)}"></option>`).join('');
+    }
+
     function fillForm(p) {
       const f = id => document.getElementById(id);
       f('f-id').value = p ? p.id : '';
@@ -503,9 +920,14 @@
       f('f-status').value = p ? (p.status || 'published') : 'published';
       currentMedia = (p && Array.isArray(p.media)) ? [...p.media] : [];
       renderMediaStrip();
+      promoLongImageUrl = p ? (p.promoLongImageUrl || null) : null;
+      promoWhiteBgImageUrl = p ? (p.promoWhiteBgImageUrl || null) : null;
+      renderPromoSlot('long', promoLongImageUrl);
+      renderPromoSlot('white', promoWhiteBgImageUrl);
       f('f-model3dType').value = p ? (p.model3dType || '') : '';
       f('f-isFeatured').checked = p ? !!p.isFeatured : false;
       f('f-isFactoryDirect').checked = p ? !!p.isFactoryDirect : false;
+      f('f-brand').value = p ? (p.brand || '') : '';
       f('f-rating').value = p && p.rating !== undefined && p.rating !== null ? p.rating : '';
       f('f-reviewsCount').value = p && p.reviewsCount !== undefined && p.reviewsCount !== null ? p.reviewsCount : '';
       f('f-priceBDT').value = p && p.priceBDT !== undefined && p.priceBDT !== null ? p.priceBDT : '';
@@ -525,8 +947,34 @@
         f(`f-tagline-${lang}`).value = (p && p.tagline && p.tagline[lang]) || '';
         f(`f-desc-${lang}`).value = (p && p.description && p.description[lang]) || '';
         f(`f-specs-${lang}`).value = JSON.stringify((p && p.specs && p.specs[lang]) || [], null, 2);
+        f(`f-highlights-${lang}`).value = ((p && p.highlights && p.highlights[lang]) || []).join('\n');
+        f(`f-whatsinbox-${lang}`).value = (p && p.whatsInBox && p.whatsInBox[lang]) || '';
       });
       f('f-tiers').value = JSON.stringify((p && p.wholesaleTiers) || [], null, 2);
+
+      f('f-variant1-name').value = p ? (p.variant1Name || '') : '';
+      f('f-variant2-name').value = p ? (p.variant2Name || '') : '';
+      variant1Values = p && Array.isArray(p.variant1Values) ? [...p.variant1Values] : [];
+      variant2Values = p && Array.isArray(p.variant2Values) ? [...p.variant2Values] : [];
+      variantRows = p && Array.isArray(p.variants)
+        ? p.variants.map(v => ({
+            variant1Value: v.variant1Value, variant2Value: v.variant2Value,
+            price: v.price, specialPrice: v.specialPrice, stock: v.stock,
+            sellerSku: v.sellerSku, freeItems: v.freeItems, isAvailable: v.isAvailable
+          }))
+        : [];
+      renderVariantTags(1);
+      renderVariantTags(2);
+      renderVariantsTable();
+
+      f('f-package-weight').value = p && p.packageWeightKg !== undefined && p.packageWeightKg !== null ? p.packageWeightKg : '';
+      f('f-package-length').value = p && p.packageLengthCm !== undefined && p.packageLengthCm !== null ? p.packageLengthCm : '';
+      f('f-package-width').value = p && p.packageWidthCm !== undefined && p.packageWidthCm !== null ? p.packageWidthCm : '';
+      f('f-package-height').value = p && p.packageHeightCm !== undefined && p.packageHeightCm !== null ? p.packageHeightCm : '';
+      f('f-dangerous-yes').checked = !!(p && p.hasDangerousGoods);
+      f('f-dangerous-none').checked = !(p && p.hasDangerousGoods);
+
+      updateContentScore();
     }
 
     function clearFieldErrors() {
@@ -577,9 +1025,44 @@
 
       const nameEn = f('f-name-en').value.trim();
       if (!nameEn) {
-        showBanner('Name (English) is required.', 'error');
+        showBanner('Product Name is required.', 'error');
         return null;
       }
+
+      const brand = f('f-brand').value.trim();
+      if (!brand) {
+        showBanner('Brand is required.', 'error');
+        return null;
+      }
+
+      if (!currentMedia.length) {
+        setFieldError('err-media', 'At least one product image is required.');
+        showBanner('At least one product image is required.', 'error');
+        return null;
+      }
+
+      const highlightsEn = parseLines(f('f-highlights-en').value);
+      if (!highlightsEn.length) {
+        showBanner('At least one highlight is required.', 'error');
+        return null;
+      }
+
+      const whatsInBoxEn = f('f-whatsinbox-en').value.trim();
+      if (!whatsInBoxEn) {
+        showBanner("What's in the Box is required.", 'error');
+        return null;
+      }
+
+      const weightRaw = f('f-package-weight').value.trim();
+      const lengthRaw = f('f-package-length').value.trim();
+      const widthRaw = f('f-package-width').value.trim();
+      const heightRaw = f('f-package-height').value.trim();
+      if (!weightRaw || !lengthRaw || !widthRaw || !heightRaw) {
+        showBanner('Package weight and dimensions are required.', 'error');
+        return null;
+      }
+
+      const priceBDTNum = priceBDT;
 
       return {
         category: f('f-category').value,
@@ -591,7 +1074,7 @@
         isFactoryDirect: f('f-isFactoryDirect').checked,
         rating: parseFloat(f('f-rating').value) || 0,
         reviewsCount: parseInt(f('f-reviewsCount').value, 10) || 0,
-        priceBDT,
+        priceBDT: priceBDTNum,
         priceUSD: parseFloat(f('f-priceUSD').value) || 0,
         priceCNY: parseFloat(f('f-priceCNY').value) || 0,
         moq: parseInt(f('f-moq').value, 10) || 0,
@@ -603,7 +1086,22 @@
         name: { bn: f('f-name-bn').value.trim(), en: nameEn, zh: f('f-name-zh').value.trim() },
         tagline: { bn: f('f-tagline-bn').value.trim(), en: f('f-tagline-en').value.trim(), zh: f('f-tagline-zh').value.trim() },
         description: { bn: f('f-desc-bn').value.trim(), en: f('f-desc-en').value.trim(), zh: f('f-desc-zh').value.trim() },
-        specs: { bn: specsBn, en: specsEn, zh: specsZh }
+        specs: { bn: specsBn, en: specsEn, zh: specsZh },
+        brand,
+        variant1Name: f('f-variant1-name').value.trim(),
+        variant1Values,
+        variant2Name: f('f-variant2-name').value.trim(),
+        variant2Values,
+        variants: variantRows,
+        highlights: { bn: parseLines(f('f-highlights-bn').value), en: highlightsEn, zh: parseLines(f('f-highlights-zh').value) },
+        whatsInBox: { bn: f('f-whatsinbox-bn').value.trim(), en: whatsInBoxEn, zh: f('f-whatsinbox-zh').value.trim() },
+        packageWeightKg: parseFloat(weightRaw),
+        packageLengthCm: parseFloat(lengthRaw),
+        packageWidthCm: parseFloat(widthRaw),
+        packageHeightCm: parseFloat(heightRaw),
+        hasDangerousGoods: f('f-dangerous-yes').checked,
+        promoLongImageUrl,
+        promoWhiteBgImageUrl
       };
     }
 
@@ -644,7 +1142,7 @@
       const price = parseFloat(priceRaw);
       const cost = parseFloat(costRaw);
       if (costRaw === '' || !Number.isFinite(price) || !Number.isFinite(cost)) {
-        display.textContent = '—';
+        display.textContent = '-';
         return;
       }
       const profit = price - cost;
@@ -666,27 +1164,29 @@
 
     function renderMediaStrip() {
       const strip = document.getElementById('media-strip');
+      const dropzoneHtml = '<div class="admin-image-add-tile" id="media-dropzone">+</div>';
       strip.innerHTML = currentMedia.map((m, i) => {
         const thumb = m.type === 'video'
-          ? '<div class="admin-media-thumb" style="display:flex;align-items:center;justify-content:center;font-size:20px;">🎬</div>'
-          : `<img class="admin-media-thumb" src="${escapeHtml(imgSrc(m.url))}" alt="" onerror="this.outerHTML='<div class=&quot;admin-media-thumb&quot; style=&quot;display:flex;align-items:center;justify-content:center;font-size:20px;&quot;>📦</div>'" />`;
+          ? '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:22px;">🎬</div>'
+          : `<img src="${escapeHtml(imgSrc(m.url))}" alt="" onerror="this.parentElement.innerHTML='📦'" />`;
         const badge = i === 0 ? '<span class="admin-badge admin-badge-gold admin-media-primary-badge">Primary</span>' : '';
         return `
-          <div class="admin-media-item">
+          <div class="admin-image-tile">
             ${badge}
             ${thumb}
             <div class="admin-media-reorder">
-              <button type="button" class="media-move-up" data-index="${i}" title="Move up" ${i === 0 ? 'disabled' : ''}>▲</button>
-              <button type="button" class="media-move-down" data-index="${i}" title="Move down" ${i === currentMedia.length - 1 ? 'disabled' : ''}>▼</button>
+              <button type="button" class="media-move-up" data-index="${i}" title="Move up" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
+              <button type="button" class="media-move-down" data-index="${i}" title="Move down" ${i === currentMedia.length - 1 ? 'disabled' : ''}>&#9660;</button>
             </div>
-            <button type="button" class="admin-media-remove-btn" data-index="${i}" title="Remove">✕</button>
+            <button type="button" class="admin-media-remove-btn" data-index="${i}" title="Remove">&#10005;</button>
           </div>
         `;
-      }).join('');
+      }).join('') + dropzoneHtml;
 
       strip.querySelectorAll('.admin-media-remove-btn').forEach(btn => btn.addEventListener('click', () => {
         currentMedia.splice(Number(btn.dataset.index), 1);
         renderMediaStrip();
+        updateContentScore();
       }));
       strip.querySelectorAll('.media-move-up').forEach(btn => btn.addEventListener('click', () => {
         const idx = Number(btn.dataset.index);
@@ -704,12 +1204,13 @@
         currentMedia[idx] = tmp;
         renderMediaStrip();
       }));
+      wireMediaDropzone();
     }
 
     function updateSaveButtonUploadState() {
       const saveBtn = document.getElementById('save-btn');
       saveBtn.disabled = uploadsInFlight > 0;
-      saveBtn.textContent = uploadsInFlight > 0 ? 'Uploading photo…' : 'Save Product';
+      saveBtn.textContent = uploadsInFlight > 0 ? 'Uploading photo…' : 'Submit';
     }
 
     async function handleMediaFiles(fileList) {
@@ -726,6 +1227,7 @@
         const data = await doMediaUpload(files);
         (data.files || []).forEach(item => currentMedia.push(item));
         renderMediaStrip();
+        updateContentScore();
       } catch (err) {
         setFieldError('err-media', err.message);
       } finally {
@@ -734,26 +1236,251 @@
       }
     }
 
-    function wireMediaUploader() {
+    function wireMediaDropzone() {
       const dropzone = document.getElementById('media-dropzone');
       const fileInput = document.getElementById('media-file-input');
+      if (!dropzone) return;
       dropzone.addEventListener('click', () => fileInput.click());
-      fileInput.addEventListener('change', () => {
-        handleMediaFiles(fileInput.files);
-        fileInput.value = '';
-      });
-      dropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropzone.classList.add('dragover');
-      });
-      dropzone.addEventListener('dragleave', () => {
-        dropzone.classList.remove('dragover');
-      });
+      dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+      dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
       dropzone.addEventListener('drop', (e) => {
         e.preventDefault();
         dropzone.classList.remove('dragover');
         handleMediaFiles(e.dataTransfer.files);
       });
+    }
+
+    function wireMediaUploader() {
+      const fileInput = document.getElementById('media-file-input');
+      fileInput.addEventListener('change', () => {
+        handleMediaFiles(fileInput.files);
+        fileInput.value = '';
+      });
+      wireMediaDropzone();
+    }
+
+    function renderPromoSlot(which, url) {
+      const dropzone = document.getElementById(`promo-${which}-dropzone`);
+      if (url) {
+        dropzone.innerHTML = `<img src="${escapeHtml(imgSrc(url))}" style="width:100%;height:100%;object-fit:cover;" />
+          <button type="button" class="admin-media-remove-btn" id="promo-${which}-remove" title="Remove">&#10005;</button>`;
+        const removeBtn = document.getElementById(`promo-${which}-remove`);
+        removeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (which === 'long') promoLongImageUrl = null; else promoWhiteBgImageUrl = null;
+          renderPromoSlot(which, null);
+        });
+      } else {
+        dropzone.innerHTML = '+';
+      }
+    }
+
+    async function handlePromoFile(which, file) {
+      if (!file) return;
+      try {
+        const data = await doMediaUpload([file]);
+        const url = data.files && data.files[0] && data.files[0].url;
+        if (which === 'long') promoLongImageUrl = url; else promoWhiteBgImageUrl = url;
+        renderPromoSlot(which, url);
+      } catch (err) {
+        showBanner(err.message, 'error');
+      }
+    }
+
+    function wirePromoUploaders() {
+      ['long', 'white'].forEach(which => {
+        const dropzone = document.getElementById(`promo-${which}-dropzone`);
+        const input = document.getElementById(`promo-${which}-input`);
+        dropzone.addEventListener('click', (e) => {
+          if (e.target.closest('.admin-media-remove-btn')) return;
+          input.click();
+        });
+        input.addEventListener('change', () => {
+          handlePromoFile(which, input.files[0]);
+          input.value = '';
+        });
+      });
+    }
+
+    // --- Variants ---
+    function renderVariantTags(n) {
+      const values = n === 1 ? variant1Values : variant2Values;
+      const holder = document.getElementById(`variant${n}-tags`);
+      holder.innerHTML = values.map((v, i) => `
+        <span class="admin-variant-tag">${escapeHtml(v)}<button type="button" data-n="${n}" data-index="${i}">&#10005;</button></span>
+      `).join('');
+      holder.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+        const arr = Number(btn.dataset.n) === 1 ? variant1Values : variant2Values;
+        arr.splice(Number(btn.dataset.index), 1);
+        renderVariantTags(Number(btn.dataset.n));
+        regenerateVariantRows();
+      }));
+    }
+
+    function wireVariantInputs() {
+      [1, 2].forEach(n => {
+        const input = document.getElementById(`f-variant${n}-input`);
+        input.addEventListener('keydown', (e) => {
+          if (e.key !== 'Enter') return;
+          e.preventDefault();
+          const val = input.value.trim();
+          if (!val) return;
+          const arr = n === 1 ? variant1Values : variant2Values;
+          if (!arr.includes(val)) arr.push(val);
+          input.value = '';
+          renderVariantTags(n);
+          regenerateVariantRows();
+        });
+      });
+      ['f-variant1-name', 'f-variant2-name'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateContentScore);
+      });
+    }
+
+    function regenerateVariantRows() {
+      const previous = new Map(variantRows.map(r => [variantKey(r.variant1Value, r.variant2Value), r]));
+      let combos = [];
+      if (variant1Values.length && variant2Values.length) {
+        variant1Values.forEach(v1 => variant2Values.forEach(v2 => combos.push([v1, v2])));
+      } else if (variant1Values.length) {
+        combos = variant1Values.map(v1 => [v1, null]);
+      } else if (variant2Values.length) {
+        combos = variant2Values.map(v2 => [null, v2]);
+      } else {
+        combos = [];
+      }
+      variantRows = combos.map(([v1, v2]) => {
+        const existing = previous.get(variantKey(v1, v2));
+        return existing || { variant1Value: v1, variant2Value: v2, price: null, specialPrice: null, stock: 0, sellerSku: '', freeItems: 0, isAvailable: true };
+      });
+      renderVariantsTable();
+      updateContentScore();
+    }
+
+    function renderVariantsTable() {
+      const region = document.getElementById('variants-table-region');
+      if (!variantRows.length) {
+        region.innerHTML = '<div class="admin-no-variants-note">No variants configured - the Default Price &amp; Stock above will be used.</div>';
+        return;
+      }
+      const v1Name = document.getElementById('f-variant1-name').value.trim() || 'Variant1';
+      const v2Name = document.getElementById('f-variant2-name').value.trim() || 'Variant2';
+      const showV1 = variantRows.some(r => r.variant1Value);
+      const showV2 = variantRows.some(r => r.variant2Value);
+      region.innerHTML = `
+        <div class="admin-variants-table-wrap">
+          <table class="admin-variants-table">
+            <thead>
+              <tr>
+                ${showV1 ? `<th>${escapeHtml(v1Name)}</th>` : ''}
+                ${showV2 ? `<th>${escapeHtml(v2Name)}</th>` : ''}
+                <th>Price</th><th>Special Price</th><th>Stock</th><th>Seller SKU</th><th>Free Items</th><th>Available</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${variantRows.map((r, i) => `
+                <tr>
+                  ${showV1 ? `<td>${escapeHtml(r.variant1Value || '-')}</td>` : ''}
+                  ${showV2 ? `<td>${escapeHtml(r.variant2Value || '-')}</td>` : ''}
+                  <td><input type="number" step="0.01" min="0" class="variant-price" data-index="${i}" value="${r.price ?? ''}" /></td>
+                  <td><input type="number" step="0.01" min="0" class="variant-special" data-index="${i}" value="${r.specialPrice ?? ''}" /></td>
+                  <td><input type="number" step="1" min="0" class="variant-stock" data-index="${i}" value="${r.stock ?? 0}" /></td>
+                  <td><input type="text" class="variant-sku" data-index="${i}" value="${escapeHtml(r.sellerSku || '')}" /></td>
+                  <td><input type="number" step="1" min="0" class="variant-free" data-index="${i}" value="${r.freeItems ?? 0}" /></td>
+                  <td style="text-align:center;"><input type="checkbox" class="variant-available" data-index="${i}" ${r.isAvailable !== false ? 'checked' : ''} /></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+      region.querySelectorAll('.variant-price').forEach(el => el.addEventListener('input', () => { variantRows[el.dataset.index].price = el.value === '' ? null : parseFloat(el.value); }));
+      region.querySelectorAll('.variant-special').forEach(el => el.addEventListener('input', () => { variantRows[el.dataset.index].specialPrice = el.value === '' ? null : parseFloat(el.value); }));
+      region.querySelectorAll('.variant-stock').forEach(el => el.addEventListener('input', () => { variantRows[el.dataset.index].stock = parseInt(el.value, 10) || 0; }));
+      region.querySelectorAll('.variant-sku').forEach(el => el.addEventListener('input', () => { variantRows[el.dataset.index].sellerSku = el.value; }));
+      region.querySelectorAll('.variant-free').forEach(el => el.addEventListener('input', () => { variantRows[el.dataset.index].freeItems = parseInt(el.value, 10) || 0; }));
+      region.querySelectorAll('.variant-available').forEach(el => el.addEventListener('change', () => { variantRows[el.dataset.index].isAvailable = el.checked; }));
+    }
+
+    // --- Content Score ---
+    const CONTENT_SCORE_SECTIONS = [
+      {
+        key: 'basic', label: 'Basic Information',
+        check: () => {
+          const missing = [];
+          if (!document.getElementById('f-name-en').value.trim()) missing.push('Add a Product Name');
+          if (!document.getElementById('f-category').value) missing.push('Select a Category');
+          if (!currentMedia.length) missing.push('Add min 1 product image');
+          return missing;
+        }
+      },
+      {
+        key: 'spec', label: 'Product Specification',
+        check: () => {
+          const missing = [];
+          if (!document.getElementById('f-brand').value.trim()) missing.push('Add a Brand');
+          return missing;
+        }
+      },
+      {
+        key: 'price', label: 'Price, Stock & Variants',
+        check: () => {
+          const missing = [];
+          if (!document.getElementById('f-priceBDT').value.trim()) missing.push('Add a Price (BDT)');
+          return missing;
+        }
+      },
+      {
+        key: 'desc', label: 'Product Description',
+        check: () => {
+          const missing = [];
+          const words = document.getElementById('f-desc-en').value.trim().split(/\s+/).filter(Boolean);
+          if (words.length < 30) missing.push('Add min 30 words in description');
+          if (!parseLines(document.getElementById('f-highlights-en').value).length) missing.push('Add min 1 highlight');
+          if (!document.getElementById('f-whatsinbox-en').value.trim()) missing.push("Add What's in the Box");
+          return missing;
+        }
+      },
+      {
+        key: 'shipping', label: 'Shipping & Warranty',
+        check: () => {
+          const missing = [];
+          if (!document.getElementById('f-package-weight').value.trim()) missing.push('Add Package Weight');
+          if (!document.getElementById('f-package-length').value.trim() || !document.getElementById('f-package-width').value.trim() || !document.getElementById('f-package-height').value.trim()) missing.push('Add Package Dimensions');
+          return missing;
+        }
+      }
+    ];
+
+    function updateContentScore() {
+      const results = CONTENT_SCORE_SECTIONS.map(s => ({ ...s, missing: s.check() }));
+      const doneCount = results.filter(r => r.missing.length === 0).length;
+      const percent = Math.round((doneCount / results.length) * 100);
+      document.getElementById('content-score-percent').textContent = percent;
+      document.getElementById('content-score-bar').style.width = percent + '%';
+      const labelEl = document.getElementById('content-score-label');
+      let label, color;
+      if (percent < 40) { label = 'Poor'; color = 'var(--mc-china-red)'; }
+      else if (percent < 70) { label = 'Fair'; color = 'var(--mc-gold, #b8860b)'; }
+      else if (percent < 100) { label = 'Good'; color = '#10A34A'; }
+      else { label = 'Excellent'; color = '#10A34A'; }
+      labelEl.textContent = label;
+      labelEl.style.color = color;
+
+      document.getElementById('content-score-list').innerHTML = results.map(r => `
+        <div class="content-score-item ${r.missing.length === 0 ? 'done' : 'active'}">
+          <span class="content-score-dot"></span>
+          <div style="flex:1;">
+            <div>${escapeHtml(r.label)}</div>
+            ${r.missing.length ? `<div class="content-score-hints">${r.missing.map(m => `<div class="content-score-hint">${escapeHtml(m)}</div>`).join('')}</div>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function wireContentScoreListeners() {
+      document.getElementById('product-form').addEventListener('input', updateContentScore);
+      document.getElementById('product-form').addEventListener('change', updateContentScore);
     }
 
     let toastTimer = null;
@@ -782,26 +1509,33 @@
       document.getElementById('f-priceBDT').addEventListener('input', updateProfitMargin);
       document.getElementById('f-costPriceBDT').addEventListener('input', updateProfitMargin);
       wireMediaUploader();
+      wirePromoUploaders();
+      wireVariantInputs();
+      wireContentScoreListeners();
 
       await loadCategories();
       populateFormCategoryOptions();
+
+      try {
+        const data = await apiFetch('/api/admin/products');
+        allProducts = data.products || [];
+      } catch (err) {
+        allProducts = [];
+      }
+      populateBrandOptions();
+      renderRecentCategories();
 
       if (productId) {
         document.title = 'Edit Product | Marketia China Admin';
         document.getElementById('page-title').textContent = 'Edit Product';
         document.getElementById('field-id-wrap').style.display = '';
-        try {
-          const data = await apiFetch('/api/admin/products');
-          const p = (data.products || []).find(x => String(x.id) === String(productId));
-          if (!p) {
-            showBanner('Product not found.', 'error');
-            return;
-          }
-          ensureCategoryOption(p.category);
-          fillForm(p);
-        } catch (err) {
-          showBanner(err.message, 'error');
+        const p = allProducts.find(x => String(x.id) === String(productId));
+        if (!p) {
+          showBanner('Product not found.', 'error');
+          return;
         }
+        ensureCategoryOption(p.category);
+        fillForm(p);
       } else {
         document.title = 'Add Product | Marketia China Admin';
         document.getElementById('page-title').textContent = 'Add Product';

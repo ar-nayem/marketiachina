@@ -11,8 +11,8 @@ function seedProducts() {
       rating, reviews_count, price_bdt, price_usd, price_cny, moq, origin_city,
       shipping_methods, lead_time_air, lead_time_sea,
       name_bn, name_en, name_zh, tagline_bn, tagline_en, tagline_zh,
-      description_bn, description_en, description_zh
-    ) VALUES (?,?,?,?,?,?,1, ?,?,?,?,?,?,?, ?,?,?, ?,?,?, ?,?,?, ?,?,?)
+      description_bn, description_en, description_zh, bd_stock
+    ) VALUES (?,?,?,?,?,?,1, ?,?,?,?,?,?,?, ?,?,?, ?,?,?, ?,?,?, ?,?,?, 50)
   `);
   const insertSpec = db.prepare(
     `INSERT INTO product_specs (product_id, lang, label, value, sort_order) VALUES (?,?,?,?,?)`

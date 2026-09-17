@@ -136,6 +136,11 @@ export class ProductShowcase {
                     <span class="px-2.5 py-0.5 rounded-md bg-[var(--bg-card)]/90 border border-[var(--border-color)] text-[10px] font-semibold text-[var(--text-secondary)]">
                       📍 ${prod.originCity}
                     </span>
+                    ${prod.stockStatus === 'pre_order' ? `
+                      <span class="px-2.5 py-0.5 rounded-md bg-amber-500 text-white text-[10px] font-bold shadow-sm">${t.products.preOrderBadge}</span>
+                    ` : (prod.stockStatus === 'out_of_stock' || prod.stockStatus === 'discontinued') ? `
+                      <span class="px-2.5 py-0.5 rounded-md bg-gray-500 text-white text-[10px] font-bold shadow-sm">${t.products.soldOut}</span>
+                    ` : ''}
                   </div>
 
                   <!-- 3D Interactive Showroom Button -->
@@ -178,10 +183,7 @@ export class ProductShowcase {
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                       </button>
 
-                      <button data-action="add-to-cart" data-id="${prod.id}" class="btn-primary text-xs px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 shadow-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        <span>${t.products.addToCart}</span>
-                      </button>
+                      ${this.renderCardActionButton(prod, t)}
                     </div>
                   </div>
 
@@ -193,6 +195,23 @@ export class ProductShowcase {
         </div>
 
       </div>
+    `;
+  }
+
+  renderCardActionButton(prod, t) {
+    if (prod.stockStatus === 'out_of_stock' || prod.stockStatus === 'discontinued') {
+      return `
+        <button class="btn-secondary text-xs px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 opacity-60 cursor-not-allowed" disabled>
+          <span>${t.products.soldOut}</span>
+        </button>
+      `;
+    }
+    const label = prod.stockStatus === 'pre_order' ? t.products.preOrder : t.products.addToCart;
+    return `
+      <button data-action="add-to-cart" data-id="${prod.id}" class="btn-primary text-xs px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 shadow-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        <span>${label}</span>
+      </button>
     `;
   }
 

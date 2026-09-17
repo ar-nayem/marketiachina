@@ -8,6 +8,7 @@ const { renderInvoiceHtml } = require('../lib/invoice');
 const { renderInvoiceEmailHtml } = require('../lib/invoice-email');
 const { renderInvoicePdfBuffer } = require('../lib/invoice-pdf');
 const { notifyTelegram } = require('../lib/telegram');
+const { computeStockStatus } = require('../lib/stock');
 
 const router = express.Router();
 
@@ -138,6 +139,18 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
       return res.status(400).json({ error: `Product is no longer available: ${productId}` });
     }
 
+    // Stock is enforced here, not just displayed - a 'pre_order'-flagged
+    // product is the only way to buy past zero stock; a plain out-of-stock
+    // or discontinued product is rejected outright rather than silently
+    // overselling (there was previously no stock check at all here).
+    const stockStatus = computeStockStatus(product);
+    if (stockStatus === 'discontinued') {
+      return res.status(400).json({ error: `Product is no longer available: ${product.name_en}` });
+    }
+    if (stockStatus === 'out_of_stock') {
+      return res.status(400).json({ error: `Product is out of stock: ${product.name_en}` });
+    }
+
     const unitPriceBDT = resolveUnitPriceBDT(product, quantity);
     const lineTotalBDT = unitPriceBDT * quantity;
 
@@ -147,6 +160,7 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
       unitPriceBDT,
       quantity,
       lineTotalBDT,
+      isPreOrder: stockStatus === 'pre_order',
     });
   }
 
@@ -208,12 +222,13 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
   }
 
   const insertItemStmt = db.prepare(`
-    INSERT INTO order_items (order_id, product_id, product_name_snapshot, unit_price_bdt, quantity, line_total_bdt)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO order_items (order_id, product_id, product_name_snapshot, unit_price_bdt, quantity, line_total_bdt, is_pre_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
   for (const li of lineItems) {
-    insertItemStmt.run(order.id, li.productId, li.productNameSnapshot, li.unitPriceBDT, li.quantity, li.lineTotalBDT);
+    insertItemStmt.run(order.id, li.productId, li.productNameSnapshot, li.unitPriceBDT, li.quantity, li.lineTotalBDT, li.isPreOrder ? 1 : 0);
   }
+  const hasPreOrderItems = lineItems.some((li) => li.isPreOrder);
 
   db.prepare(`INSERT INTO leads (email, phone, name, source, source_ref_id) VALUES (?, ?, ?, 'checkout', ?)`).run(
     email, phone, name, order.id
@@ -245,9 +260,9 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
       });
     });
 
-  const itemsSummary = savedItems.map((li) => `• ${li.product_name_snapshot} × ${li.quantity}`).join('\n');
+  const itemsSummary = savedItems.map((li) => `• ${li.product_name_snapshot} × ${li.quantity}${li.is_pre_order ? ' (PRE-ORDER)' : ''}`).join('\n');
   notifyTelegram(
-    `🛒 <b>New Order ${order.order_number}</b>\n` +
+    `🛒 <b>New Order ${order.order_number}</b>${hasPreOrderItems ? ' ⏳ <b>Contains pre-order item(s)</b>' : ''}\n` +
       `${name} — ${phone}\n` +
       `${email}\n\n` +
       `${itemsSummary}\n\n` +
@@ -268,6 +283,7 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
     accessToken: order.access_token,
     paymentMethod: order.payment_method,
     totalBdt: order.total_bdt,
+    hasPreOrderItems,
     invoiceUrl: `/api/orders/${order.id}/invoice?t=${order.access_token}`,
     invoicePdfUrl: `/api/orders/${order.id}/invoice.pdf?t=${order.access_token}`,
     whatsappUrl,
@@ -299,6 +315,7 @@ router.get('/', requireAuth, (req, res) => {
       unitPriceBDT: li.unit_price_bdt,
       quantity: li.quantity,
       lineTotalBDT: li.line_total_bdt,
+      isPreOrder: !!li.is_pre_order,
     })),
   }));
 
@@ -385,7 +402,7 @@ router.get('/track', (req, res) => {
   if (!phoneMatches && !emailMatches) return notFound();
 
   const items = db
-    .prepare(`SELECT product_name_snapshot, quantity FROM order_items WHERE order_id = ? ORDER BY id ASC`)
+    .prepare(`SELECT product_name_snapshot, quantity, is_pre_order FROM order_items WHERE order_id = ? ORDER BY id ASC`)
     .all(order.id);
 
   const history = db
@@ -409,7 +426,7 @@ router.get('/track', (req, res) => {
     paymentMethod: order.payment_method,
     paymentStatus: derivePaymentStatus(order),
     totalBdt: order.total_bdt,
-    items: items.map((i) => ({ productName: i.product_name_snapshot, quantity: i.quantity })),
+    items: items.map((i) => ({ productName: i.product_name_snapshot, quantity: i.quantity, isPreOrder: !!i.is_pre_order })),
     history: history.map((h) => ({ status: h.status, createdAt: h.created_at })),
     shipment: shipmentRow
       ? { courier: shipmentRow.courier, trackingNumber: shipmentRow.tracking_number, courierStatus: shipmentRow.courier_status }

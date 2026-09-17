@@ -83,7 +83,11 @@ export const zh = {
     tier1: "1–99 件",
     tier2: "100–499 件",
     tier3: "500+ 件",
-    discount: "优惠"
+    discount: "优惠",
+    soldOut: "已售罄",
+    preOrder: "预订",
+    preOrderBadge: "预订",
+    preOrderNote: "暂时缺货 — 补货后立即发货。"
   },
 
   logistics: {
@@ -207,7 +211,9 @@ export const zh = {
     promoError: "无效的优惠券码",
     total: "总计金额",
     checkoutBtn: "确认提交订单",
-    continueShopping: "继续选品"
+    continueShopping: "继续选品",
+    soldOutNotice: "请移除下方已售罄的商品以继续。",
+    preOrderNotice: "订单包含预订商品 — 补货后发货。"
   },
 
   checkout: {
@@ -221,6 +227,7 @@ export const zh = {
     paymentMethod: "支付方式",
     noActiveMethods: "目前没有可用的支付方式，请联系客服。",
     orderSummary: "订单清单摘要",
+    preOrderNotice: "此订单包含预订商品 — 补货后发货。",
     placeOrder: "确认提交订单 (总额: ",
     successTitle: "🎉 订单已成功提交！",
     successDesc: "我们的中国物流专员将通过 WhatsApp / WeChat 与您对接运单号及形式发票 (PI)。",

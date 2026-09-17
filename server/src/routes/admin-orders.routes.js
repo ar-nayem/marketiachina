@@ -38,13 +38,14 @@ function toCamelItem(i) {
     unitPriceBdt: i.unit_price_bdt,
     quantity: i.quantity,
     lineTotalBdt: i.line_total_bdt,
+    isPreOrder: !!i.is_pre_order,
   };
 }
 
 router.get('/', requirePermission('orders.view'), (req, res) => {
   const rows = db
     .prepare(
-      `SELECT o.*, COUNT(oi.id) AS item_count
+      `SELECT o.*, COUNT(oi.id) AS item_count, MAX(oi.is_pre_order) AS has_pre_order_items
        FROM orders o
        LEFT JOIN order_items oi ON oi.order_id = o.id
        GROUP BY o.id
@@ -63,6 +64,7 @@ router.get('/', requirePermission('orders.view'), (req, res) => {
       paymentStatus: o.payment_status,
       createdAt: o.created_at,
       itemCount: o.item_count,
+      hasPreOrderItems: !!o.has_pre_order_items,
     })),
   });
 });

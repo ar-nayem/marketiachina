@@ -1,5 +1,6 @@
 const express = require('express');
 const { db } = require('../db');
+const { computeStockStatus } = require('../lib/stock');
 
 const router = express.Router();
 
@@ -51,7 +52,11 @@ function buildProduct(row, specRows, tierRows, mediaRows, reviewSummary) {
     tagline: { bn: row.tagline_bn, en: row.tagline_en, zh: row.tagline_zh },
     description: { bn: row.description_bn, en: row.description_en, zh: row.description_zh },
     specs,
-    media
+    media,
+    // Computed, not raw bd_stock/cn_stock counts - those are internal
+    // warehouse detail. One of 'in_stock' | 'low_stock' | 'out_of_stock' |
+    // 'pre_order' | 'discontinued'.
+    stockStatus: computeStockStatus(row)
   };
 }
 
