@@ -82,6 +82,19 @@
       width: 200px;
       flex: 0 0 auto;
     }
+    .trash-countdown {
+      display: block;
+      margin-top: 5px;
+      color: var(--mc-china-red);
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .admin-icon-btn.permanent-delete-btn {
+      border-color: rgba(222, 41, 16, 0.35);
+      color: var(--mc-china-red);
+      background: var(--mc-china-red-light);
+    }
   </style>
 </head>
 <body>
@@ -130,6 +143,7 @@
 
   <script type="module">
     import { apiFetch, requireAdminAuth, renderSidebar, wireLogout, escapeHtml } from './js/adminShell.js';
+    import { formatPurgeCountdown } from './js/productTrash.mjs';
 
     let products = [];
     let categories = [];
@@ -199,10 +213,16 @@
         const status = p.status || 'draft';
         const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
         const badgeClass = STATUS_BADGE_CLASS[status] || 'admin-badge-neutral';
-        const badge = `<span class="admin-badge ${badgeClass}">${escapeHtml(statusLabel)}</span>`;
-        const actionBtn = p.isActive
+        const countdown = !p.isActive
+          ? `<span class="trash-countdown">${escapeHtml(formatPurgeCountdown(p.purgeAt))}</span>`
+          : '';
+        const badge = `<span class="admin-badge ${badgeClass}">${escapeHtml(statusLabel)}</span>${countdown}`;
+        const actionBtns = p.isActive
           ? `<button class="admin-icon-btn delete-btn" data-id="${escapeHtml(p.id)}" title="Delete">🗑️</button>`
-          : `<button class="admin-icon-btn restore-btn" data-id="${escapeHtml(p.id)}" title="Restore">♻️</button>`;
+          : `
+              <button class="admin-icon-btn restore-btn" data-id="${escapeHtml(p.id)}" title="Restore">♻️</button>
+              <button class="admin-icon-btn permanent-delete-btn" data-id="${escapeHtml(p.id)}" title="Permanently Delete">✕</button>
+            `;
         return `
           <tr>
             <td>${img}</td>
@@ -214,7 +234,7 @@
             <td>
               <div class="admin-row-actions">
                 <a class="admin-icon-btn" href="/admin/product-form.html?id=${encodeURIComponent(p.id)}" title="Edit">✏️</a>
-                ${actionBtn}
+                ${actionBtns}
               </div>
             </td>
           </tr>
@@ -223,6 +243,7 @@
 
       tbody.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', () => handleDelete(btn.dataset.id)));
       tbody.querySelectorAll('.restore-btn').forEach(btn => btn.addEventListener('click', () => handleRestore(btn.dataset.id)));
+      tbody.querySelectorAll('.permanent-delete-btn').forEach(btn => btn.addEventListener('click', () => handlePermanentDelete(btn.dataset.id)));
     }
 
     async function loadProducts() {
@@ -250,6 +271,17 @@
       try {
         await apiFetch(`/api/admin/products/${encodeURIComponent(id)}/restore`, { method: 'POST' });
         showToast('Product restored');
+        await loadProducts();
+      } catch (err) {
+        showBanner(err.message, 'error');
+      }
+    }
+
+    async function handlePermanentDelete(id) {
+      if (!confirm('Permanently delete this product? This cannot be undone and its catalog data and media will be removed.')) return;
+      try {
+        await apiFetch(`/api/admin/products/${encodeURIComponent(id)}/permanent`, { method: 'DELETE' });
+        showToast('Product permanently deleted');
         await loadProducts();
       } catch (err) {
         showBanner(err.message, 'error');

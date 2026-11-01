@@ -4,12 +4,15 @@ const express = require('express');
 
 const { db } = require('./src/db');
 const { runSeed } = require('./src/seed');
+const { UPLOAD_DIR } = require('./src/lib/upload');
+const { startProductPurgeScheduler } = require('./src/lib/productPurgeScheduler');
 
 const PORT = process.env.PORT || 8080;
 const SITE_ROOT = path.join(__dirname, '..', 'site');
 const ADMIN_ROOT = path.join(__dirname, '..', 'admin');
 
 runSeed();
+startProductPurgeScheduler({ db, uploadsRoot: UPLOAD_DIR });
 
 const app = express();
 app.use(express.json());

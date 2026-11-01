@@ -3,6 +3,13 @@ const crypto = require('node:crypto');
 const { db } = require('../db');
 const { requirePermission } = require('../middleware/requirePermission');
 const { logActivity } = require('../lib/activityLog');
+const { UPLOAD_DIR } = require('../lib/upload');
+const {
+  getPurgeAt,
+  purgeProduct,
+  restoreProduct,
+  softDeleteProduct,
+} = require('../lib/productRetention');
 
 const router = express.Router();
 
@@ -101,7 +108,9 @@ function buildProduct(row, specRows, tierRows, mediaRows, variantRows, reviewSum
     packageHeightCm: row.package_height_cm,
     hasDangerousGoods: !!row.has_dangerous_goods,
     promoLongImageUrl: row.promo_long_image_url,
-    promoWhiteBgImageUrl: row.promo_white_bg_image_url
+    promoWhiteBgImageUrl: row.promo_white_bg_image_url,
+    deletedAt: row.deleted_at,
+    purgeAt: getPurgeAt(row.deleted_at),
   };
 }
 
@@ -459,10 +468,8 @@ router.put('/:id', requirePermission('products.edit'), (req, res) => {
 });
 
 router.delete('/:id', requirePermission('products.delete'), (req, res) => {
-  const existing = db.prepare(`SELECT id FROM products WHERE id = ?`).get(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Product not found.' });
-
-  db.prepare(`UPDATE products SET is_active = 0, status = 'archived', updated_at = datetime('now') WHERE id = ?`).run(req.params.id);
+  const result = softDeleteProduct(db, req.params.id);
+  if (!result.found) return res.status(404).json({ error: 'Product not found.' });
 
   logActivity({
     adminId: req.admin.id,
@@ -473,14 +480,12 @@ router.delete('/:id', requirePermission('products.delete'), (req, res) => {
     ip: req.ip
   });
 
-  res.json({ ok: true });
+  res.json({ ok: true, deletedAt: result.deletedAt, purgeAt: getPurgeAt(result.deletedAt) });
 });
 
 router.post('/:id/restore', requirePermission('products.edit'), (req, res) => {
-  const existing = db.prepare(`SELECT id FROM products WHERE id = ?`).get(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Product not found.' });
-
-  db.prepare(`UPDATE products SET is_active = 1, status = 'published', updated_at = datetime('now') WHERE id = ?`).run(req.params.id);
+  const result = restoreProduct(db, req.params.id);
+  if (!result.found) return res.status(404).json({ error: 'Product not found.' });
 
   logActivity({
     adminId: req.admin.id,
@@ -489,6 +494,26 @@ router.post('/:id/restore', requirePermission('products.edit'), (req, res) => {
     targetType: 'product',
     targetId: req.params.id,
     ip: req.ip
+  });
+
+  res.json({ ok: true });
+});
+
+router.delete('/:id/permanent', requirePermission('products.delete'), (req, res) => {
+  const result = purgeProduct(db, req.params.id, { uploadsRoot: UPLOAD_DIR });
+  if (!result.found) return res.status(404).json({ error: 'Product not found.' });
+  if (!result.purged) {
+    return res.status(409).json({ error: 'Archive the product before permanent deletion.' });
+  }
+
+  logActivity({
+    adminId: req.admin.id,
+    adminName: req.admin.name,
+    action: 'product.permanently_deleted',
+    targetType: 'product',
+    targetId: req.params.id,
+    before: { name: result.productName, status: 'archived' },
+    ip: req.ip,
   });
 
   res.json({ ok: true });

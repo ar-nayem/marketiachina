@@ -11,6 +11,7 @@ const {
   restoreProduct,
   purgeProduct,
   purgeExpiredProducts,
+  getPurgeAt,
 } = require('../src/lib/productRetention');
 
 const temporaryDirectories = [];
@@ -175,4 +176,9 @@ test('migration adds deletion retention metadata and backfills legacy archived p
     db.prepare(`SELECT deleted_at FROM products WHERE id = 'legacy-archived'`).get().deleted_at,
     '2026-10-01 09:30:00'
   );
+});
+
+test('purge deadline is exactly 30 days after deletion', () => {
+  assert.equal(getPurgeAt('2026-10-02 09:30:00'), '2026-11-01 09:30:00');
+  assert.equal(getPurgeAt(null), null);
 });
