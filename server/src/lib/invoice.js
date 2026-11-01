@@ -56,6 +56,7 @@ function renderInvoiceHtml(order, items, settings) {
     <tr>
       <td>${esc(item.product_name_snapshot)}</td>
       <td class="num">${esc(item.quantity)}</td>
+      <td class="num">${Number(item.line_weight_kg || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} kg</td>
       <td class="num">${formatBDT(item.unit_price_bdt)}</td>
       <td class="num">${formatBDT(item.line_total_bdt)}</td>
     </tr>`).join('');
@@ -266,7 +267,7 @@ function renderInvoiceHtml(order, items, settings) {
 </style>
 </head>
 <body>
-  <div class="download-pdf-btn"><a href="/api/orders/${esc(order.id)}/invoice.pdf?t=${esc(order.access_token)}">⬇ Download PDF</a></div>
+  <div class="download-pdf-btn" style="gap:8px"><a href="/api/orders/${esc(order.id)}/invoice.xlsx?t=${esc(order.access_token)}">⬇ Download Excel</a><a href="/api/orders/${esc(order.id)}/invoice.pdf?t=${esc(order.access_token)}">⬇ Download PDF</a></div>
   <div class="sheet">
     <div class="band"></div>
     <div class="header">
@@ -295,6 +296,7 @@ function renderInvoiceHtml(order, items, settings) {
         <p class="name">${esc(paymentLabel)}</p>
         <p class="meta-label" style="margin-top:16px">Shipping Method</p>
         <p class="name">${esc(shippingLabel)}</p>
+        <p class="muted">${esc(order.total_weight_kg)} kg × ${formatBDT(order.shipping_rate_bdt_per_kg)}/kg</p>
       </div>
     </div>
 
@@ -303,6 +305,7 @@ function renderInvoiceHtml(order, items, settings) {
         <tr>
           <th>Item</th>
           <th class="num">Qty</th>
+          <th class="num">Weight</th>
           <th class="num">Unit Price</th>
           <th class="num">Line Total</th>
         </tr>
@@ -317,6 +320,14 @@ function renderInvoiceHtml(order, items, settings) {
         <tr>
           <td class="totals-label">Subtotal</td>
           <td class="num">${formatBDT(order.subtotal_bdt)}</td>
+        </tr>
+        <tr>
+          <td class="totals-label">Total Weight</td>
+          <td class="num">${esc(order.total_weight_kg)} kg</td>
+        </tr>
+        <tr>
+          <td class="totals-label">Delivery Rate</td>
+          <td class="num">${formatBDT(order.shipping_rate_bdt_per_kg)}/kg</td>
         </tr>
         <tr>
           <td class="totals-label">Shipping Fee</td>

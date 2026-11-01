@@ -12,6 +12,8 @@ const order = {
   shipping_address: 'Dhaka, Bangladesh',
   payment_method: 'cod',
   shipping_method: 'air',
+  total_weight_kg: 25,
+  shipping_rate_bdt_per_kg: 48,
   subtotal_bdt: 123500,
   discount_bdt: 500,
   shipping_fee_bdt: 1200,
@@ -21,8 +23,8 @@ const order = {
 };
 
 const items = [
-  { product_name_snapshot: 'Noise Cancelling Headphones', quantity: 10, unit_price_bdt: 5450, line_total_bdt: 54500 },
-  { product_name_snapshot: 'Mechanical Keyboard', quantity: 15, unit_price_bdt: 4600, line_total_bdt: 69000 },
+  { product_name_snapshot: 'Noise Cancelling Headphones', quantity: 10, unit_weight_kg: 1, line_weight_kg: 10, unit_price_bdt: 5450, line_total_bdt: 54500 },
+  { product_name_snapshot: 'Mechanical Keyboard', quantity: 15, unit_weight_kg: 1, line_weight_kg: 15, unit_price_bdt: 4600, line_total_bdt: 69000 },
 ];
 
 test('creates an editable executive invoice whose totals recalculate from order lines', async () => {
@@ -38,10 +40,12 @@ test('creates an editable executive invoice whose totals recalculate from order 
   assert.equal(sheet.getCell('A1').value, 'MARKETIA CHINA');
   assert.equal(sheet.getCell('F7').value, 'MC-BD-2026-12345');
   assert.equal(sheet.getCell('B13').value, 'Noise Cancelling Headphones');
+  assert.equal(sheet.getCell('C13').value, 1);
   assert.equal(sheet.getCell('D13').value, 10);
   assert.equal(sheet.getCell('E13').value, 5450);
   assert.equal(sheet.getCell('G13').value.formula, 'D13*E13*(1-F13)');
-  assert.equal(sheet.getCell('G20').value.formula, 'SUM(G13:G17)');
-  assert.equal(sheet.getCell('G25').value.formula, 'G20-G21+G22+G23-G24');
-  assert.equal(sheet.getCell('G22').value, 1200);
+  assert.equal(sheet.getCell('H13').value.formula, 'C13*D13');
+  assert.equal(sheet.getCell('G20').value.formula, 'SUM(H13:H17)');
+  assert.equal(sheet.getCell('G22').value.formula, 'G20*G21');
+  assert.equal(sheet.getCell('G27').value.formula, 'G23-G24+G22+G25-G26');
 });

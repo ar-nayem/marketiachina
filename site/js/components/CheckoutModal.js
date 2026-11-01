@@ -166,7 +166,8 @@ export class CheckoutModal {
           <div class="p-4 rounded-xl bg-[var(--bg-tertiary)] border border-[var(--border-color)] flex items-center justify-between">
             <div>
               <span class="text-xs text-[var(--text-muted)]">${t.checkout.orderSummary}</span>
-              <div class="text-sm font-bold text-[var(--text-primary)]">${totals.totalItems} items (${totals.shippingMethod.toUpperCase()})</div>
+              <div class="text-sm font-bold text-[var(--text-primary)]">${totals.totalItems} items • ${totals.totalWeightKg.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg (${totals.shippingMethod.toUpperCase()})</div>
+              <div class="text-[11px] text-[var(--text-muted)] mt-1">${totals.totalWeightKg.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg × ৳${Number(totals.shippingRateBDTPerKg).toLocaleString()}/kg = ${totals.shippingFeeFormatted}</div>
             </div>
             <div class="text-lg font-black text-[#DE2910]">
               ${totals.finalTotalFormatted}

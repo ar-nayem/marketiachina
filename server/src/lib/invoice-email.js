@@ -47,6 +47,7 @@ function renderInvoiceEmailHtml(order, items, settings) {
     <tr>
       <td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:13px;color:${INK};">${esc(item.product_name_snapshot)}</td>
       <td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:13px;color:${INK};text-align:right;white-space:nowrap;">${esc(item.quantity)}</td>
+      <td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:13px;color:${INK};text-align:right;white-space:nowrap;">${esc(item.line_weight_kg)} kg</td>
       <td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:13px;color:${INK};text-align:right;white-space:nowrap;">${formatBDT(item.unit_price_bdt)}</td>
       <td style="padding:10px 0;border-bottom:1px solid ${BORDER};font-size:13px;color:${INK};text-align:right;white-space:nowrap;">${formatBDT(item.line_total_bdt)}</td>
     </tr>`).join('');
@@ -113,6 +114,7 @@ function renderInvoiceEmailHtml(order, items, settings) {
                     <div style="font-size:13px;font-weight:bold;color:${INK};">${esc(paymentLabel)}</div>
                     <div style="font-size:10px;font-weight:bold;color:${GOLD_ACCENT};text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px;">Shipping Method</div>
                     <div style="font-size:13px;font-weight:bold;color:${INK};">${esc(shippingLabel)}</div>
+                    <div style="font-size:11px;color:${MUTED};margin-top:3px;">${esc(order.total_weight_kg)} kg × ${formatBDT(order.shipping_rate_bdt_per_kg)}/kg</div>
                   </td>
                 </tr>
               </table>
@@ -126,6 +128,7 @@ function renderInvoiceEmailHtml(order, items, settings) {
                 <tr>
                   <td style="padding:0 0 8px;border-bottom:2px solid ${RED};font-size:10px;color:${MUTED};text-transform:uppercase;letter-spacing:0.5px;">Item</td>
                   <td style="padding:0 0 8px;border-bottom:2px solid ${RED};font-size:10px;color:${MUTED};text-transform:uppercase;letter-spacing:0.5px;text-align:right;">Qty</td>
+                  <td style="padding:0 0 8px;border-bottom:2px solid ${RED};font-size:10px;color:${MUTED};text-transform:uppercase;letter-spacing:0.5px;text-align:right;">Weight</td>
                   <td style="padding:0 0 8px;border-bottom:2px solid ${RED};font-size:10px;color:${MUTED};text-transform:uppercase;letter-spacing:0.5px;text-align:right;">Unit Price</td>
                   <td style="padding:0 0 8px;border-bottom:2px solid ${RED};font-size:10px;color:${MUTED};text-transform:uppercase;letter-spacing:0.5px;text-align:right;">Line Total</td>
                 </tr>
@@ -141,6 +144,14 @@ function renderInvoiceEmailHtml(order, items, settings) {
                 <tr>
                   <td style="padding:4px 0;font-size:13px;color:${MUTED};">Subtotal</td>
                   <td style="padding:4px 0;font-size:13px;color:${INK};text-align:right;">${formatBDT(order.subtotal_bdt)}</td>
+                </tr>
+                <tr>
+                  <td style="padding:4px 0;font-size:13px;color:${MUTED};">Total Weight</td>
+                  <td style="padding:4px 0;font-size:13px;color:${INK};text-align:right;">${esc(order.total_weight_kg)} kg</td>
+                </tr>
+                <tr>
+                  <td style="padding:4px 0;font-size:13px;color:${MUTED};">Delivery Rate</td>
+                  <td style="padding:4px 0;font-size:13px;color:${INK};text-align:right;">${formatBDT(order.shipping_rate_bdt_per_kg)}/kg</td>
                 </tr>
                 <tr>
                   <td style="padding:4px 0;font-size:13px;color:${MUTED};">Shipping Fee</td>
@@ -181,7 +192,7 @@ function renderInvoiceEmailHtml(order, items, settings) {
           <!-- Thanks -->
           <tr>
             <td style="padding:0 28px 26px;text-align:center;font-size:12px;color:${MUTED};">
-              Thank you for shopping with <strong style="color:${RED};">${esc(businessName)}</strong>. Your full invoice is attached to this email as a PDF — save it or use it for reference.
+              Thank you for shopping with <strong style="color:${RED};">${esc(businessName)}</strong>. Your invoice is attached as both PDF and editable Excel files.
             </td>
           </tr>
 

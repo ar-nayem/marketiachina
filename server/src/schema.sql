@@ -143,6 +143,8 @@ CREATE TABLE IF NOT EXISTS orders (
   subtotal_bdt REAL NOT NULL,
   discount_bdt REAL NOT NULL DEFAULT 0,
   shipping_fee_bdt REAL NOT NULL,
+  total_weight_kg REAL NOT NULL DEFAULT 0,
+  shipping_rate_bdt_per_kg REAL NOT NULL DEFAULT 0,
   total_bdt REAL NOT NULL,
   promo_code TEXT,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','confirmed','shipped','delivered','cancelled')),
@@ -165,6 +167,8 @@ CREATE TABLE IF NOT EXISTS order_items (
   unit_price_bdt REAL NOT NULL,
   quantity INTEGER NOT NULL,
   line_total_bdt REAL NOT NULL,
+  unit_weight_kg REAL NOT NULL DEFAULT 1,
+  line_weight_kg REAL NOT NULL DEFAULT 0,
   is_pre_order INTEGER NOT NULL DEFAULT 0
 );
 

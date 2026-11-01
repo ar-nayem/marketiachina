@@ -47,6 +47,7 @@ function buildProduct(row, specRows, tierRows, mediaRows, reviewSummary) {
     shippingMethods: row.shipping_methods ? JSON.parse(row.shipping_methods) : [],
     leadTimeAir: row.lead_time_air,
     leadTimeSea: row.lead_time_sea,
+    packageWeightKg: Number(row.package_weight_kg) > 0 ? Number(row.package_weight_kg) : 1,
     wholesaleTiers,
     name: { bn: row.name_bn, en: row.name_en, zh: row.name_zh },
     tagline: { bn: row.tagline_bn, en: row.tagline_en, zh: row.tagline_zh },

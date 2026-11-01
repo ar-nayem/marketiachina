@@ -37,6 +37,7 @@ export function calculateCheckoutTotals({
 }) {
   let subtotalBDT = 0;
   let totalItems = 0;
+  let totalWeightKg = 0;
 
   for (const item of items) {
     const product = products.find((candidate) => candidate.id === item.productId);
@@ -48,18 +49,17 @@ export function calculateCheckoutTotals({
     if (tier) unitPrice = tier.priceBDT;
     subtotalBDT += unitPrice * item.quantity;
     totalItems += item.quantity;
+    const unitWeightKg = Number(product.packageWeightKg) > 0 ? Number(product.packageWeightKg) : 1;
+    totalWeightKg += unitWeightKg * item.quantity;
   }
 
   const discountAmountBDT = appliedPromo
     ? Math.round(subtotalBDT * (appliedPromo.discountPercent / 100))
     : 0;
-  const shippingFactor = shippingMethod === 'sea'
-    ? shippingRates.cartSeaFactor
-    : shippingRates.cartAirFactor;
   const shippingRate = shippingMethod === 'sea'
     ? shippingRates.seaBdtPerKg
     : shippingRates.airBdtPerKg;
-  const shippingFeeBDT = totalItems > 0 ? shippingRate * Math.ceil(totalItems * shippingFactor) : 0;
+  const shippingFeeBDT = Math.round(totalWeightKg * shippingRate * 100) / 100;
   const finalTotalBDT = Math.max(0, subtotalBDT - discountAmountBDT + shippingFeeBDT);
 
   let multiplier = 1;
@@ -78,6 +78,8 @@ export function calculateCheckoutTotals({
 
   return {
     totalItems,
+    totalWeightKg,
+    shippingRateBDTPerKg: shippingRate,
     subtotalBDT,
     subtotalFormatted: format(subtotalBDT),
     discountAmountBDT,

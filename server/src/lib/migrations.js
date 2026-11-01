@@ -313,6 +313,24 @@ function runMigrations(db) {
   // pre-feature) are left 'pending', matching what they actually were.
   db.exec(`UPDATE mail_outbox SET status = 'sent' WHERE sent_at IS NOT NULL AND status = 'pending'`);
 
+  // r. Snapshot product weight and the selected per-kg delivery rate onto
+  // each order, so historical invoices keep their original shipping math.
+  const weightOrderColumns = new Set(db.prepare('PRAGMA table_info(orders)').all().map((col) => col.name));
+  if (!weightOrderColumns.has('total_weight_kg')) {
+    db.exec(`ALTER TABLE orders ADD COLUMN total_weight_kg REAL NOT NULL DEFAULT 0`);
+  }
+  if (!weightOrderColumns.has('shipping_rate_bdt_per_kg')) {
+    db.exec(`ALTER TABLE orders ADD COLUMN shipping_rate_bdt_per_kg REAL NOT NULL DEFAULT 0`);
+  }
+  const weightItemColumns = new Set(db.prepare('PRAGMA table_info(order_items)').all().map((col) => col.name));
+  if (!weightItemColumns.has('unit_weight_kg')) {
+    db.exec(`ALTER TABLE order_items ADD COLUMN unit_weight_kg REAL NOT NULL DEFAULT 1`);
+  }
+  if (!weightItemColumns.has('line_weight_kg')) {
+    db.exec(`ALTER TABLE order_items ADD COLUMN line_weight_kg REAL NOT NULL DEFAULT 0`);
+    db.exec(`UPDATE order_items SET line_weight_kg = quantity * unit_weight_kg WHERE line_weight_kg = 0`);
+  }
+
   console.log('[migrations] schema ready (RBAC + catalog + payments + email senders)');
 }
 

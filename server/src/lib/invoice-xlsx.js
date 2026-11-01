@@ -82,7 +82,7 @@ async function renderInvoiceXlsxBuffer(order, items, settings = {}) {
     headerFooter: { oddFooter: 'Marketia China • Customer editable copy' },
   });
 
-  const widths = [5, 28, 15, 11, 16, 14, 18, 18];
+  const widths = [5, 28, 14, 11, 16, 14, 18, 16];
   widths.forEach((width, index) => { sheet.getColumn(index + 1).width = width; });
   sheet.properties.defaultRowHeight = 20;
   sheet.eachRow((row) => { row.font = { name: 'Arial', size: 10, color: { argb: COLORS.ink } }; });
@@ -129,7 +129,7 @@ async function renderInvoiceXlsxBuffer(order, items, settings = {}) {
   });
   sheet.getCell('H7').numFmt = 'dd-mmm-yyyy';
 
-  const headers = ['#', 'PRODUCT', 'SKU / NOTE', 'QTY', 'UNIT PRICE', 'DISCOUNT', 'LINE TOTAL', 'STATUS'];
+  const headers = ['#', 'PRODUCT', 'UNIT WT. (KG)', 'QTY', 'UNIT PRICE', 'DISCOUNT', 'LINE TOTAL', 'TOTAL WT. (KG)'];
   headers.forEach((header, index) => {
     const cell = sheet.getCell(12, index + 1);
     cell.value = header;
@@ -144,45 +144,53 @@ async function renderInvoiceXlsxBuffer(order, items, settings = {}) {
     const row = 13 + index;
     sheet.getCell(`A${row}`).value = index + 1;
     setEditable(sheet.getCell(`B${row}`), text(item.product_name_snapshot));
-    setEditable(sheet.getCell(`C${row}`), '');
+    setEditable(sheet.getCell(`C${row}`), number(item.unit_weight_kg) || 1);
     setEditable(sheet.getCell(`D${row}`), number(item.quantity));
     setEditable(sheet.getCell(`E${row}`), number(item.unit_price_bdt));
     setEditable(sheet.getCell(`F${row}`), 0);
     sheet.getCell(`G${row}`).value = { formula: `D${row}*E${row}*(1-F${row})`, result: number(item.line_total_bdt) };
     sheet.getCell(`G${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.calc } };
     sheet.getCell(`G${row}`).font = { bold: true };
-    setEditable(sheet.getCell(`H${row}`), item.is_pre_order ? 'Pre-order' : 'Ordered');
+    sheet.getCell(`H${row}`).value = { formula: `C${row}*D${row}`, result: number(item.line_weight_kg) };
+    sheet.getCell(`H${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.calc } };
   });
   for (let index = items.length; index < maxItemRows; index += 1) {
     const row = 13 + index;
     sheet.getCell(`A${row}`).value = index + 1;
-    ['B', 'C', 'D', 'E', 'F', 'H'].forEach((col) => setEditable(sheet.getCell(`${col}${row}`), ['D', 'E', 'F'].includes(col) ? 0 : ''));
+    ['B', 'C', 'D', 'E', 'F'].forEach((col) => setEditable(sheet.getCell(`${col}${row}`), ['C', 'D', 'E', 'F'].includes(col) ? 0 : ''));
     sheet.getCell(`G${row}`).value = { formula: `D${row}*E${row}*(1-F${row})`, result: 0 };
     sheet.getCell(`G${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.calc } };
+    sheet.getCell(`H${row}`).value = { formula: `C${row}*D${row}`, result: 0 };
+    sheet.getCell(`H${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.calc } };
   }
   setOutline(sheet, `A13:H${12 + maxItemRows}`);
   sheet.getColumn('E').numFmt = MONEY_FORMAT;
   sheet.getColumn('F').numFmt = '0%';
   sheet.getColumn('G').numFmt = MONEY_FORMAT;
+  sheet.getColumn('C').numFmt = '0.00';
+  sheet.getColumn('H').numFmt = '0.00';
 
   const summaryStart = Math.max(20, 15 + maxItemRows);
   const summaryRows = [
+    ['Total Weight (kg)', { formula: `SUM(H13:H${12 + maxItemRows})`, result: number(order.total_weight_kg) }],
+    ['Shipping Rate (BDT/kg)', number(order.shipping_rate_bdt_per_kg)],
+    ['Shipping', { formula: `G${summaryStart}*G${summaryStart + 1}`, result: number(order.shipping_fee_bdt) }],
     ['Subtotal', { formula: `SUM(G13:G${12 + maxItemRows})`, result: number(order.subtotal_bdt) }],
     ['Order Discount', number(order.discount_bdt)],
-    ['Shipping', number(order.shipping_fee_bdt)],
     ['Tax / Fees', 0],
     ['Paid', 0],
-    ['BALANCE', { formula: `G${summaryStart}-G${summaryStart + 1}+G${summaryStart + 2}+G${summaryStart + 3}-G${summaryStart + 4}`, result: number(order.total_bdt) }],
+    ['BALANCE', { formula: `G${summaryStart + 3}-G${summaryStart + 4}+G${summaryStart + 2}+G${summaryStart + 5}-G${summaryStart + 6}`, result: number(order.total_bdt) }],
   ];
   summaryRows.forEach(([label, value], index) => {
     const row = summaryStart + index;
     sheet.getCell(`E${row}`).value = label;
     sheet.getCell(`G${row}`).value = value;
   });
-  [summaryStart + 1, summaryStart + 2, summaryStart + 3, summaryStart + 4].forEach((row) => setEditable(sheet.getCell(`G${row}`), sheet.getCell(`G${row}`).value));
-  setOutline(sheet, `E${summaryStart}:G${summaryStart + 5}`);
-  eachCellInRange(sheet, `G${summaryStart}:G${summaryStart + 5}`, (cell) => { cell.numFmt = MONEY_FORMAT; });
-  eachCellInRange(sheet, `E${summaryStart + 5}:G${summaryStart + 5}`, (cell) => {
+  [summaryStart + 1, summaryStart + 4, summaryStart + 5, summaryStart + 6].forEach((row) => setEditable(sheet.getCell(`G${row}`), sheet.getCell(`G${row}`).value));
+  setOutline(sheet, `E${summaryStart}:G${summaryStart + 7}`);
+  eachCellInRange(sheet, `G${summaryStart + 1}:G${summaryStart + 7}`, (cell) => { cell.numFmt = MONEY_FORMAT; });
+  sheet.getCell(`G${summaryStart}`).numFmt = '0.00';
+  eachCellInRange(sheet, `E${summaryStart + 7}:G${summaryStart + 7}`, (cell) => {
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.red } };
     cell.font = { name: 'Arial', size: 12, bold: true, color: { argb: COLORS.white } };
   });
@@ -193,7 +201,7 @@ async function renderInvoiceXlsxBuffer(order, items, settings = {}) {
   sheet.getCell(`A${summaryStart}`).alignment = { wrapText: true, vertical: 'middle' };
   sheet.getCell(`A${summaryStart}`).font = { name: 'Arial', size: 10, italic: true, color: { argb: COLORS.ink } };
 
-  sheet.pageSetup.printArea = `A1:H${summaryStart + 5}`;
+  sheet.pageSetup.printArea = `A1:H${summaryStart + 7}`;
   sheet.autoFilter = { from: 'A12', to: `H${12 + maxItemRows}` };
   sheet.views = [{ state: 'frozen', ySplit: 12, showGridLines: false }];
 

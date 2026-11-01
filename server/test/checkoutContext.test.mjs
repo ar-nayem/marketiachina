@@ -40,8 +40,8 @@ test('cart checkout snapshots current cart settings and remains clearable', () =
 
 test('direct checkout totals include only context items and no cart promotion', () => {
   const products = [
-    { id: 'cart-product', priceBDT: 1000 },
-    { id: 'direct-product', priceBDT: 400, wholesaleTiers: [{ min: 2, max: 5, priceBDT: 350 }] },
+    { id: 'cart-product', priceBDT: 1000, packageWeightKg: 3 },
+    { id: 'direct-product', priceBDT: 400, packageWeightKg: 1.25, wholesaleTiers: [{ min: 2, max: 5, priceBDT: 350 }] },
   ];
   const context = createDirectCheckoutContext({ productId: 'direct-product', quantity: 2 });
 
@@ -55,6 +55,8 @@ test('direct checkout totals include only context items and no cart promotion', 
 
   assert.equal(totals.subtotalBDT, 700);
   assert.equal(totals.discountAmountBDT, 0);
-  assert.equal(totals.shippingFeeBDT, 100);
-  assert.equal(totals.finalTotalBDT, 800);
+  assert.equal(totals.totalWeightKg, 2.5);
+  assert.equal(totals.shippingRateBDTPerKg, 100);
+  assert.equal(totals.shippingFeeBDT, 250);
+  assert.equal(totals.finalTotalBDT, 950);
 });

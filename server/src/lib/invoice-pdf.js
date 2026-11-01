@@ -88,6 +88,10 @@ function drawMetaGrid(doc, order, paymentLabel, shippingLabel, startY) {
   doc.fontSize(11).fillColor(INK).text(paymentLabel, rightColX, y + 15);
   doc.fontSize(9).fillColor(GOLD).text('SHIPPING METHOD', rightColX, y + 40, { characterSpacing: 1 });
   doc.fontSize(11).fillColor(INK).text(shippingLabel, rightColX, y + 55);
+  doc.fontSize(8.5).fillColor(MUTED).text(
+    `${Number(order.total_weight_kg || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} kg × ${formatBDT(order.shipping_rate_bdt_per_kg)}/kg`,
+    rightColX, y + 72
+  );
 
   return startY + boxHeight;
 }
@@ -99,13 +103,14 @@ function ensureSpace(doc, y, needed) {
 }
 
 function drawItemsTable(doc, items, startY) {
-  const cols = { item: MARGIN_X, qty: MARGIN_X + 300, price: MARGIN_X + 360, total: MARGIN_X + 460 };
-  const colWidths = { item: 290, qty: 50, price: 90, total: CONTENT_WIDTH - 460 + MARGIN_X };
+  const cols = { item: MARGIN_X, qty: MARGIN_X + 245, weight: MARGIN_X + 295, price: MARGIN_X + 365, total: MARGIN_X + 455 };
+  const colWidths = { item: 235, qty: 42, weight: 62, price: 82, total: CONTENT_WIDTH - 455 + MARGIN_X };
 
   let y = startY + 18;
   doc.fontSize(9).fillColor(MUTED);
   doc.text('ITEM', cols.item, y, { characterSpacing: 0.5 });
   doc.text('QTY', cols.qty, y, { width: colWidths.qty, align: 'right', characterSpacing: 0.5 });
+  doc.text('WEIGHT', cols.weight, y, { width: colWidths.weight, align: 'right', characterSpacing: 0.5 });
   doc.text('UNIT PRICE', cols.price, y, { width: colWidths.price, align: 'right', characterSpacing: 0.5 });
   doc.text('LINE TOTAL', cols.total, y, { width: colWidths.total, align: 'right', characterSpacing: 0.5 });
 
@@ -120,6 +125,7 @@ function drawItemsTable(doc, items, startY) {
 
     doc.fontSize(10).fillColor(INK).text(item.product_name_snapshot, cols.item, y, { width: colWidths.item });
     doc.text(String(item.quantity), cols.qty, y, { width: colWidths.qty, align: 'right' });
+    doc.text(`${Number(item.line_weight_kg || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} kg`, cols.weight, y, { width: colWidths.weight, align: 'right' });
     doc.text(formatBDT(item.unit_price_bdt), cols.price, y, { width: colWidths.price, align: 'right' });
     doc.text(formatBDT(item.line_total_bdt), cols.total, y, { width: colWidths.total, align: 'right' });
 
@@ -131,7 +137,7 @@ function drawItemsTable(doc, items, startY) {
 }
 
 function drawTotals(doc, order, startY) {
-  let y = ensureSpace(doc, startY, 110) + 10;
+  let y = ensureSpace(doc, startY, 150) + 10;
   const boxWidth = 220;
   const x = PAGE_WIDTH - MARGIN_X - boxWidth;
   const labelWidth = 110;
@@ -144,6 +150,8 @@ function drawTotals(doc, order, startY) {
   }
 
   row('Subtotal', formatBDT(order.subtotal_bdt));
+  row('Total Weight', `${Number(order.total_weight_kg || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} kg`);
+  row('Delivery Rate', `${formatBDT(order.shipping_rate_bdt_per_kg)}/kg`);
   row('Shipping Fee', formatBDT(order.shipping_fee_bdt));
   const discount = Number(order.discount_bdt) || 0;
   if (discount > 0) row('Discount', `− ${formatBDT(discount)}`);

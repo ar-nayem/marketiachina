@@ -11,6 +11,7 @@ const { renderInvoiceXlsxBuffer } = require('../lib/invoice-xlsx');
 const { buildInvoiceAttachments } = require('../lib/invoice-attachments');
 const { notifyTelegram } = require('../lib/telegram');
 const { computeStockStatus } = require('../lib/stock');
+const { normalizeUnitWeight, calculateWeightBasedShipping } = require('../lib/shipping-weight');
 
 const router = express.Router();
 
@@ -155,6 +156,7 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
 
     const unitPriceBDT = resolveUnitPriceBDT(product, quantity);
     const lineTotalBDT = unitPriceBDT * quantity;
+    const unitWeightKg = normalizeUnitWeight(product.package_weight_kg);
 
     lineItems.push({
       productId: product.id,
@@ -162,16 +164,16 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
       unitPriceBDT,
       quantity,
       lineTotalBDT,
+      unitWeightKg,
+      lineWeightKg: unitWeightKg * quantity,
       isPreOrder: stockStatus === 'pre_order',
     });
   }
 
   const subtotalBDT = lineItems.reduce((sum, li) => sum + li.lineTotalBDT, 0);
-  const totalItems = lineItems.reduce((sum, li) => sum + li.quantity, 0);
   const rates = getShippingRates();
-  const shippingFeeBDT = shippingMethod === 'air'
-    ? rates.airBdtPerKg * Math.ceil(totalItems * rates.cartAirFactor)
-    : rates.seaBdtPerKg * Math.ceil(totalItems * rates.cartSeaFactor);
+  const shippingQuote = calculateWeightBasedShipping({ items: lineItems, shippingMethod, rates });
+  const { totalWeightKg, shippingRateBDTPerKg, shippingFeeBDT } = shippingQuote;
   const discountBDT = 0; // promo codes are stored but not yet functional
   const totalBDT = subtotalBDT + shippingFeeBDT - discountBDT;
 
@@ -189,8 +191,8 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
     INSERT INTO orders (
       order_number, access_token, customer_id, customer_name, customer_phone, customer_email,
       shipping_address, payment_method, shipping_method, subtotal_bdt, discount_bdt, shipping_fee_bdt,
-      total_bdt, promo_code, status, payment_status, payment_expires_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending_payment', ?)
+      total_weight_kg, shipping_rate_bdt_per_kg, total_bdt, promo_code, status, payment_status, payment_expires_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending_payment', ?)
   `);
 
   let order = null;
@@ -200,7 +202,7 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
     try {
       const result = insertOrderStmt.run(
         orderNumber, accessToken, customerId, name, phone, email, address,
-        paymentMethod, shippingMethod, subtotalBDT, discountBDT, shippingFeeBDT, totalBDT,
+        paymentMethod, shippingMethod, subtotalBDT, discountBDT, shippingFeeBDT, totalWeightKg, shippingRateBDTPerKg, totalBDT,
         promoCode || null, paymentExpiresAt
       );
       order = db.prepare(`SELECT * FROM orders WHERE id = ?`).get(result.lastInsertRowid);
@@ -224,11 +226,11 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
   }
 
   const insertItemStmt = db.prepare(`
-    INSERT INTO order_items (order_id, product_id, product_name_snapshot, unit_price_bdt, quantity, line_total_bdt, is_pre_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO order_items (order_id, product_id, product_name_snapshot, unit_price_bdt, quantity, line_total_bdt, unit_weight_kg, line_weight_kg, is_pre_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   for (const li of lineItems) {
-    insertItemStmt.run(order.id, li.productId, li.productNameSnapshot, li.unitPriceBDT, li.quantity, li.lineTotalBDT, li.isPreOrder ? 1 : 0);
+    insertItemStmt.run(order.id, li.productId, li.productNameSnapshot, li.unitPriceBDT, li.quantity, li.lineTotalBDT, li.unitWeightKg, li.lineWeightKg, li.isPreOrder ? 1 : 0);
   }
   const hasPreOrderItems = lineItems.some((li) => li.isPreOrder);
 
@@ -285,6 +287,8 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
     accessToken: order.access_token,
     paymentMethod: order.payment_method,
     totalBdt: order.total_bdt,
+    totalWeightKg: order.total_weight_kg,
+    shippingRateBdtPerKg: order.shipping_rate_bdt_per_kg,
     hasPreOrderItems,
     invoiceUrl: `/api/orders/${order.id}/invoice?t=${order.access_token}`,
     invoicePdfUrl: `/api/orders/${order.id}/invoice.pdf?t=${order.access_token}`,
@@ -310,6 +314,8 @@ router.get('/', requireAuth, (req, res) => {
     subtotalBDT: o.subtotal_bdt,
     shippingFeeBDT: o.shipping_fee_bdt,
     totalBDT: o.total_bdt,
+    totalWeightKg: o.total_weight_kg,
+    shippingRateBDTPerKg: o.shipping_rate_bdt_per_kg,
     invoiceUrl: `/api/orders/${o.id}/invoice?t=${o.access_token}`,
     invoicePdfUrl: `/api/orders/${o.id}/invoice.pdf?t=${o.access_token}`,
     invoiceXlsxUrl: `/api/orders/${o.id}/invoice.xlsx?t=${o.access_token}`,
@@ -319,6 +325,8 @@ router.get('/', requireAuth, (req, res) => {
       unitPriceBDT: li.unit_price_bdt,
       quantity: li.quantity,
       lineTotalBDT: li.line_total_bdt,
+      unitWeightKg: li.unit_weight_kg,
+      lineWeightKg: li.line_weight_kg,
       isPreOrder: !!li.is_pre_order,
     })),
   }));
