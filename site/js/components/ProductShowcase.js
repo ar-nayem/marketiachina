@@ -172,13 +172,13 @@ export class ProductShowcase {
                   </div>
 
                   <!-- Price & Action Buttons -->
-                  <div class="pt-3 border-t border-[var(--border-color)] flex items-center justify-between">
+                  <div class="pt-3 border-t border-[var(--border-color)] space-y-3">
                     <div>
                       <div class="text-xl font-extrabold text-[#DE2910]">${formattedPrice}</div>
                       <div class="text-[10px] text-[var(--text-muted)] font-semibold">${t.products.wholesaleTiers} ➔</div>
                     </div>
 
-                    <div class="flex items-center gap-2">
+                    <div class="grid gap-2" style="grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);">
                       <button data-action="quick-view" data-id="${prod.id}" class="p-2.5 rounded-lg border border-[var(--border-color)] text-[var(--text-primary)] hover:border-[#DE2910] hover:text-[#DE2910] transition-colors" title="${t.products.viewDetails}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                       </button>
@@ -204,6 +204,9 @@ export class ProductShowcase {
         <button class="btn-secondary text-xs px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 opacity-60 cursor-not-allowed" disabled>
           <span>${t.products.soldOut}</span>
         </button>
+        <button class="btn-secondary text-xs px-3.5 py-2.5 rounded-lg opacity-60 cursor-not-allowed" disabled>
+          ${t.products.buyNow}
+        </button>
       `;
     }
     const label = prod.stockStatus === 'pre_order' ? t.products.preOrder : t.products.addToCart;
@@ -211,6 +214,9 @@ export class ProductShowcase {
       <button data-action="add-to-cart" data-id="${prod.id}" class="btn-primary text-xs px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 shadow-sm">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
         <span>${label}</span>
+      </button>
+      <button data-action="buy-now" data-id="${prod.id}" class="btn-secondary text-xs px-3.5 py-2.5 rounded-lg font-bold">
+        ${t.products.buyNow}
       </button>
     `;
   }
@@ -233,6 +239,19 @@ export class ProductShowcase {
         const prodId = addBtn.getAttribute('data-id');
         cartState.addItem(prodId, 1);
         document.dispatchEvent(new CustomEvent('show-toast', { detail: { message: langState.t.toasts.addedToCart } }));
+        return;
+      }
+
+      const buyNowBtn = e.target.closest('[data-action="buy-now"]');
+      if (buyNowBtn) {
+        const product = productsData.find((candidate) => candidate.id === buyNowBtn.getAttribute('data-id'));
+        document.dispatchEvent(new CustomEvent('open-checkout-modal', {
+          detail: {
+            mode: 'direct',
+            productId: buyNowBtn.getAttribute('data-id'),
+            quantity: product?.moq || 1,
+          },
+        }));
         return;
       }
 

@@ -9,3 +9,7 @@ export function formatPurgeCountdown(purgeAt, now = new Date()) {
   if (days === 1) return '1 day remaining';
   return `${days} days remaining`;
 }
+
+export function isProductTrashed(product) {
+  return product?.status === 'archived' && Boolean(product.deletedAt);
+}

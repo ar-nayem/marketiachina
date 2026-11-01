@@ -14,6 +14,9 @@ function createDb() {
       is_active INTEGER NOT NULL,
       status TEXT NOT NULL,
       deleted_at TEXT,
+      image TEXT,
+      promo_long_image_url TEXT,
+      promo_white_bg_image_url TEXT,
       updated_at TEXT
     );
     CREATE TABLE order_items (id INTEGER PRIMARY KEY, product_id TEXT REFERENCES products(id));

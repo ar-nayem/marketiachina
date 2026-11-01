@@ -188,7 +188,7 @@ export class ProductDetailModal {
 
             <!-- Quantity & CTA Actions -->
             <div class="space-y-3 pt-3 border-t border-[var(--border-color)]">
-              <div class="flex items-center gap-3">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                 <div class="flex items-center border border-[var(--border-color)] rounded-lg bg-[var(--bg-card)]">
                   <button id="modal-dec-qty" class="w-9 h-9 flex items-center justify-center font-bold hover:text-[#DE2910]">-</button>
                   <span id="modal-qty-display" class="px-3 text-sm font-bold">${this.quantity}</span>
@@ -196,14 +196,20 @@ export class ProductDetailModal {
                 </div>
 
                 ${this.isSoldOut(prod) ? `
-                  <button class="flex-1 btn-secondary py-2.5 text-xs rounded-lg flex items-center justify-center gap-2 opacity-60 cursor-not-allowed" disabled>
-                    <span>${t.products.soldOut}</span>
-                  </button>
+                  <div class="grid grid-cols-2 gap-2 flex-1">
+                    <button class="btn-secondary py-2.5 text-xs rounded-lg opacity-60 cursor-not-allowed" disabled>${t.products.soldOut}</button>
+                    <button class="btn-secondary py-2.5 text-xs rounded-lg opacity-60 cursor-not-allowed" disabled>${t.products.buyNow}</button>
+                  </div>
                 ` : `
-                  <button id="modal-add-cart-btn" class="flex-1 btn-primary py-2.5 text-xs rounded-lg flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    <span>${prod.stockStatus === 'pre_order' ? t.products.preOrder : t.products.addToCart}</span>
-                  </button>
+                  <div class="grid grid-cols-2 gap-2 flex-1">
+                    <button id="modal-add-cart-btn" class="btn-primary py-2.5 px-2 text-xs rounded-lg flex items-center justify-center gap-2">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                      <span>${prod.stockStatus === 'pre_order' ? t.products.preOrder : t.products.addToCart}</span>
+                    </button>
+                    <button id="modal-buy-now-btn" class="btn-secondary py-2.5 px-2 text-xs rounded-lg font-bold">
+                      ${t.products.buyNow}
+                    </button>
+                  </div>
                 `}
               </div>
 
@@ -548,6 +554,15 @@ export class ProductDetailModal {
         this.close();
         document.dispatchEvent(new CustomEvent('show-toast', {
           detail: { message: langState.t.toasts.addedToCart }
+        }));
+      }
+
+      if (e.target.closest('#modal-buy-now-btn')) {
+        const productId = this.activeProduct.id;
+        const quantity = this.quantity;
+        this.close();
+        document.dispatchEvent(new CustomEvent('open-checkout-modal', {
+          detail: { mode: 'direct', productId, quantity },
         }));
       }
     });

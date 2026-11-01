@@ -377,6 +377,7 @@ router.put('/:id', requirePermission('products.edit'), (req, res) => {
     }
     set('status', body.status);
     set('is_active', body.status === 'published' ? 1 : 0);
+    if (body.status !== 'archived') set('deleted_at', null);
   }
   if (body.costPriceBDT !== undefined) {
     if (body.costPriceBDT !== null && typeof body.costPriceBDT !== 'number') {

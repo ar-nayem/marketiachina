@@ -1,6 +1,7 @@
 // Marketia China - Cart State Manager
 import { productsData } from '../data/products.js';
 import { settingsState } from './settingsState.js';
+import { calculateCheckoutTotals } from './checkoutContext.mjs';
 
 const STORAGE_KEY = 'marketia_cart';
 
@@ -89,57 +90,21 @@ class CartStateManager {
   }
 
   getTotals(currencyCode = 'BDT') {
-    let subtotalBDT = 0;
-    let totalItems = 0;
-
-    this.items.forEach(item => {
-      const prod = productsData.find(p => p.id === item.productId);
-      if (prod) {
-        // Check tiered pricing
-        let unitPrice = prod.priceBDT;
-        if (prod.wholesaleTiers) {
-          const tier = prod.wholesaleTiers.find(t => item.quantity >= t.min && item.quantity <= t.max);
-          if (tier) unitPrice = tier.priceBDT;
-        }
-        subtotalBDT += unitPrice * item.quantity;
-        totalItems += item.quantity;
-      }
-    });
-
-    const discountAmountBDT = this.appliedPromo
-      ? Math.round(subtotalBDT * (this.appliedPromo.discountPercent / 100))
-      : 0;
-
-    // Shipping calculation: rate (BDT) per shipment unit, scaled by item-count factor
-    // (mirrors the backend's identical formula in orders.routes.js so estimate === checkout charge)
-    const rates = settingsState.shippingRates;
-    const shippingFeeBDT = totalItems > 0 ? (this.shippingMethod === 'air' ? rates.airBdtPerKg * Math.ceil(totalItems * rates.cartAirFactor) : rates.seaBdtPerKg * Math.ceil(totalItems * rates.cartSeaFactor)) : 0;
-    const finalTotalBDT = Math.max(0, subtotalBDT - discountAmountBDT + shippingFeeBDT);
-
-    // Conversions if requested in USD or CNY
-    let multiplier = 1;
-    let symbol = '৳';
-    if (currencyCode === 'USD') {
-      multiplier = 1 / 122.5;
-      symbol = '$';
-    } else if (currencyCode === 'CNY') {
-      multiplier = 1 / 16.9;
-      symbol = '¥';
-    }
-
-    return {
-      totalItems,
-      subtotalBDT,
-      subtotalFormatted: `${symbol}${(subtotalBDT * multiplier).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 })}`,
-      discountAmountBDT,
-      discountFormatted: `${symbol}${(discountAmountBDT * multiplier).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 })}`,
-      shippingFeeBDT,
-      shippingFeeFormatted: `${symbol}${(shippingFeeBDT * multiplier).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 })}`,
-      finalTotalBDT,
-      finalTotalFormatted: `${symbol}${(finalTotalBDT * multiplier).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 })}`,
+    return this.getTotalsForItems(this.items, currencyCode, {
       shippingMethod: this.shippingMethod,
-      appliedPromo: this.appliedPromo
-    };
+      appliedPromo: this.appliedPromo,
+    });
+  }
+
+  getTotalsForItems(items, currencyCode = 'BDT', options = {}) {
+    return calculateCheckoutTotals({
+      items,
+      products: productsData,
+      shippingMethod: options.shippingMethod || this.shippingMethod,
+      appliedPromo: options.appliedPromo ?? null,
+      shippingRates: settingsState.shippingRates,
+      currencyCode,
+    });
   }
 
   subscribe(callback) {

@@ -6,8 +6,13 @@ import { settingsState } from '../state/settingsState.js';
 import { productsData } from '../data/products.js';
 import confetti from '../vendor/confetti/confetti.module.mjs';
 import { fireEmojiBurst } from './EmojiBurst.js';
+import {
+  createCartCheckoutContext,
+  createDirectCheckoutContext,
+} from '../state/checkoutContext.mjs';
 
 const METHOD_ICONS = { alipay: '🇨🇳', wechat: '💬', bkash: '🌸', nagad: '🔥', bank: '🏛️' };
+const PENDING_DIRECT_CHECKOUT_KEY = 'marketia_pending_direct_checkout';
 
 export class CheckoutModal {
   constructor(modalElement) {
@@ -26,6 +31,7 @@ export class CheckoutModal {
     this.whatsappUrl = '';
     this.errorMessage = '';
     this.confirmError = '';
+    this.checkoutContext = createCartCheckoutContext(cartState);
     this.loadPaymentMethods();
     this.render();
     this.setupListeners();
@@ -50,14 +56,14 @@ export class CheckoutModal {
   }
 
   hasPreOrderItemInCart() {
-    return cartState.items.some(item => {
+    return this.checkoutContext.items.some(item => {
       const prod = productsData.find(p => p.id === item.productId);
       return prod && prod.stockStatus === 'pre_order';
     });
   }
 
   hasSoldOutItemInCart() {
-    return cartState.items.some(item => {
+    return this.checkoutContext.items.some(item => {
       const prod = productsData.find(p => p.id === item.productId);
       return prod && (prod.stockStatus === 'out_of_stock' || prod.stockStatus === 'discontinued');
     });
@@ -65,7 +71,10 @@ export class CheckoutModal {
 
   render() {
     const t = langState.t;
-    const totals = cartState.getTotals();
+    const totals = cartState.getTotalsForItems(this.checkoutContext.items, 'BDT', {
+      shippingMethod: this.checkoutContext.shippingMethod,
+      appliedPromo: this.checkoutContext.appliedPromo,
+    });
 
     this.modalElement.className = `modal-overlay ${this.isOpen ? 'open' : ''}`;
     this.modalElement.innerHTML = `
@@ -344,7 +353,23 @@ export class CheckoutModal {
     `;
   }
 
-  open() {
+  open(detail = null) {
+    let request = detail;
+    if (!request) {
+      try {
+        request = JSON.parse(sessionStorage.getItem(PENDING_DIRECT_CHECKOUT_KEY) || 'null');
+      } catch (_) {
+        sessionStorage.removeItem(PENDING_DIRECT_CHECKOUT_KEY);
+      }
+    }
+
+    if (request?.mode === 'direct' && request.productId) {
+      this.checkoutContext = createDirectCheckoutContext(request);
+      sessionStorage.setItem(PENDING_DIRECT_CHECKOUT_KEY, JSON.stringify(request));
+    } else {
+      this.checkoutContext = createCartCheckoutContext(cartState);
+      sessionStorage.removeItem(PENDING_DIRECT_CHECKOUT_KEY);
+    }
     this.isOpen = true;
     this.step = authState.user ? 'form' : 'gate';
     this.render();
@@ -352,12 +377,13 @@ export class CheckoutModal {
 
   close() {
     this.isOpen = false;
+    sessionStorage.removeItem(PENDING_DIRECT_CHECKOUT_KEY);
     this.render();
   }
 
   setupListeners() {
     langState.subscribe(() => this.render());
-    document.addEventListener('open-checkout-modal', () => this.open());
+    document.addEventListener('open-checkout-modal', (event) => this.open(event.detail));
 
     authState.subscribe(() => {
       if (this.isOpen && this.step === 'gate' && authState.user) {
@@ -393,7 +419,8 @@ export class CheckoutModal {
       if (e.target.closest('#pay-later-btn')) {
         this.step = 'success';
         this.render();
-        cartState.clearCart();
+        if (this.checkoutContext.shouldClearCart) cartState.clearCart();
+        sessionStorage.removeItem(PENDING_DIRECT_CHECKOUT_KEY);
         return;
       }
 
@@ -473,11 +500,11 @@ export class CheckoutModal {
         email,
         address,
         paymentMethod: this.selectedPayment,
-        shippingMethod: cartState.shippingMethod,
-        items: cartState.items.map(item => ({ productId: item.productId, quantity: item.quantity })),
+        shippingMethod: this.checkoutContext.shippingMethod,
+        items: this.checkoutContext.items.map(item => ({ productId: item.productId, quantity: item.quantity })),
       };
-      if (cartState.appliedPromo && cartState.appliedPromo.code) {
-        body.promoCode = cartState.appliedPromo.code;
+      if (this.checkoutContext.appliedPromo?.code) {
+        body.promoCode = this.checkoutContext.appliedPromo.code;
       }
 
       const res = await fetch('/api/orders', {
@@ -504,7 +531,8 @@ export class CheckoutModal {
       this.isSubmitting = false;
       // The order itself is placed - the cart's job is done here. Payment
       // verification is a separate step that follows.
-      cartState.clearCart();
+      if (this.checkoutContext.shouldClearCart) cartState.clearCart();
+      sessionStorage.removeItem(PENDING_DIRECT_CHECKOUT_KEY);
       this.step = 'payment-instructions';
       this.render();
     } catch (err) {

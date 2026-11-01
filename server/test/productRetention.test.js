@@ -26,6 +26,9 @@ function createFixture() {
       is_active INTEGER NOT NULL DEFAULT 1,
       status TEXT NOT NULL DEFAULT 'published',
       deleted_at TEXT,
+      image TEXT,
+      promo_long_image_url TEXT,
+      promo_white_bg_image_url TEXT,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE TABLE order_items (
@@ -138,6 +141,35 @@ test('active products cannot be permanently purged', () => {
     reason: 'active',
   });
   assert.ok(db.prepare(`SELECT id FROM products WHERE id = 'p1'`).get());
+});
+
+test('malformed media URLs never turn a committed purge into a false failure', () => {
+  const { db, uploadsRoot } = createFixture();
+  insertProduct(db, 'p1', '2026-09-01 00:00:00');
+  db.prepare(`INSERT INTO product_media (product_id, url) VALUES ('p1', '/uploads/%')`).run();
+
+  const result = purgeProduct(db, 'p1', { uploadsRoot });
+
+  assert.equal(result.purged, true);
+  assert.deepEqual(result.deletedFiles, []);
+  assert.equal(db.prepare(`SELECT id FROM products WHERE id = 'p1'`).get(), undefined);
+});
+
+test('purge keeps an upload file while another product still references its URL', () => {
+  const { db, uploadsRoot } = createFixture();
+  insertProduct(db, 'p1', '2026-09-01 00:00:00');
+  insertProduct(db, 'p2');
+  const sharedUrl = '/uploads/shared.jpg';
+  const sharedPath = path.join(uploadsRoot, 'shared.jpg');
+  fs.writeFileSync(sharedPath, 'shared');
+  db.prepare(`INSERT INTO product_media (product_id, url) VALUES ('p1', ?)`).run(sharedUrl);
+  db.prepare(`UPDATE products SET promo_long_image_url = ? WHERE id = 'p2'`).run(sharedUrl);
+
+  const result = purgeProduct(db, 'p1', { uploadsRoot });
+
+  assert.equal(result.purged, true);
+  assert.equal(fs.existsSync(sharedPath), true);
+  assert.deepEqual(result.deletedFiles, []);
 });
 
 test('expiry purge removes only products deleted at least 30 days ago', () => {

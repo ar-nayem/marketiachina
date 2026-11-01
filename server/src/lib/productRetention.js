@@ -53,7 +53,12 @@ function localUploadPath(mediaUrl, uploadsRoot) {
   if (!pathname.startsWith('/uploads/')) return null;
 
   const root = path.resolve(uploadsRoot);
-  const relative = decodeURIComponent(pathname.slice('/uploads/'.length));
+  let relative;
+  try {
+    relative = decodeURIComponent(pathname.slice('/uploads/'.length));
+  } catch (_) {
+    return null;
+  }
   const candidate = path.resolve(root, relative);
   if (candidate === root || !candidate.startsWith(`${root}${path.sep}`)) return null;
   return candidate;
@@ -61,10 +66,15 @@ function localUploadPath(mediaUrl, uploadsRoot) {
 
 function cleanupUnreferencedMedia(db, mediaUrls, uploadsRoot) {
   const deletedFiles = [];
-  const countReferences = db.prepare('SELECT COUNT(*) AS count FROM product_media WHERE url = ?');
+  const countReferences = db.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM product_media WHERE url = ?) +
+      (SELECT COUNT(*) FROM products
+       WHERE image = ? OR promo_long_image_url = ? OR promo_white_bg_image_url = ?) AS count
+  `);
 
   for (const mediaUrl of new Set(mediaUrls)) {
-    if (countReferences.get(mediaUrl).count > 0) continue;
+    if (countReferences.get(mediaUrl, mediaUrl, mediaUrl, mediaUrl).count > 0) continue;
     const filePath = localUploadPath(mediaUrl, uploadsRoot);
     if (!filePath) continue;
     try {
@@ -132,9 +142,18 @@ function purgeExpiredProducts(db, { uploadsRoot, now = new Date().toISOString() 
   });
 }
 
+function getPurgeAt(deletedAt) {
+  if (!deletedAt) return null;
+  const parsed = new Date(`${deletedAt.replace(' ', 'T')}Z`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  parsed.setUTCDate(parsed.getUTCDate() + 30);
+  return parsed.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 module.exports = {
   softDeleteProduct,
   restoreProduct,
   purgeProduct,
   purgeExpiredProducts,
+  getPurgeAt,
 };
