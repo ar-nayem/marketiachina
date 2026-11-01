@@ -55,6 +55,7 @@ function runMigrations(db) {
     ['category_id', 'INTEGER REFERENCES categories(id)'],
     ['cost_price_bdt', 'REAL'],
     ['status', "TEXT NOT NULL DEFAULT 'published'"],
+    ['deleted_at', 'TEXT'],
   ];
   for (const [columnName, columnDef] of productColumnsToAdd) {
     if (!productColumns.has(columnName)) {
@@ -67,6 +68,11 @@ function runMigrations(db) {
       }
     }
   }
+  db.exec(`
+    UPDATE products
+    SET deleted_at = COALESCE(updated_at, created_at, datetime('now'))
+    WHERE is_active = 0 AND deleted_at IS NULL
+  `);
 
   // g. Seed categories from whatever distinct category slugs already exist on products.
   const distinctCategories = db.prepare('SELECT DISTINCT category FROM products WHERE category IS NOT NULL').all();

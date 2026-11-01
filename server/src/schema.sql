@@ -72,7 +72,8 @@ CREATE TABLE IF NOT EXISTS products (
   promo_long_image_url TEXT,
   promo_white_bg_image_url TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  deleted_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS product_variants (
