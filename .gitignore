@@ -6,3 +6,4 @@ server/data/*.sqlite3-wal
 server/data/uploads/
 .env
 .env.local
+.worktrees/
