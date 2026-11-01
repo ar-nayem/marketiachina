@@ -7,6 +7,8 @@ const { sendMail } = require('../lib/mailer');
 const { renderInvoiceHtml } = require('../lib/invoice');
 const { renderInvoiceEmailHtml } = require('../lib/invoice-email');
 const { renderInvoicePdfBuffer } = require('../lib/invoice-pdf');
+const { renderInvoiceXlsxBuffer } = require('../lib/invoice-xlsx');
+const { buildInvoiceAttachments } = require('../lib/invoice-attachments');
 const { notifyTelegram } = require('../lib/telegram');
 const { computeStockStatus } = require('../lib/stock');
 
@@ -238,19 +240,19 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
   const settings = { businessName: getSettingValue('business_name', 'Marketia China') };
   const emailHtml = renderInvoiceEmailHtml(order, savedItems, settings);
 
-  renderInvoicePdfBuffer(order, savedItems, settings)
-    .then((pdfBuffer) => {
+  buildInvoiceAttachments(order, savedItems, settings)
+    .then((attachments) => {
       sendMail({
         to: email,
         subject: `Your Marketia China Order ${order.order_number}`,
         html: emailHtml,
         kind: 'invoice',
         relatedOrderId: order.id,
-        attachments: [{ filename: `Invoice-${order.order_number}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+        attachments,
       });
     })
     .catch((err) => {
-      console.error('[INVOICE PDF] Failed to generate, sending email without attachment:', err.message);
+      console.error('[INVOICE ATTACHMENTS] Failed to generate, sending email without attachments:', err.message);
       sendMail({
         to: email,
         subject: `Your Marketia China Order ${order.order_number}`,
@@ -286,6 +288,7 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
     hasPreOrderItems,
     invoiceUrl: `/api/orders/${order.id}/invoice?t=${order.access_token}`,
     invoicePdfUrl: `/api/orders/${order.id}/invoice.pdf?t=${order.access_token}`,
+    invoiceXlsxUrl: `/api/orders/${order.id}/invoice.xlsx?t=${order.access_token}`,
     whatsappUrl,
   });
 });
@@ -309,6 +312,7 @@ router.get('/', requireAuth, (req, res) => {
     totalBDT: o.total_bdt,
     invoiceUrl: `/api/orders/${o.id}/invoice?t=${o.access_token}`,
     invoicePdfUrl: `/api/orders/${o.id}/invoice.pdf?t=${o.access_token}`,
+    invoiceXlsxUrl: `/api/orders/${o.id}/invoice.xlsx?t=${o.access_token}`,
     items: itemsStmt.all(o.id).map((li) => ({
       productId: li.product_id,
       name: li.product_name_snapshot,
@@ -368,6 +372,28 @@ router.get('/:id/invoice.pdf', async (req, res) => {
     res.send(pdfBuffer);
   } catch (err) {
     console.error('[INVOICE PDF] Failed to generate for download:', err.message);
+    res.status(500).type('html').send(renderNotFoundPage());
+  }
+});
+
+router.get('/:id/invoice.xlsx', async (req, res) => {
+  const orderId = Number(req.params.id);
+  if (!Number.isInteger(orderId)) return res.status(404).type('html').send(renderNotFoundPage());
+
+  const order = db.prepare(`SELECT * FROM orders WHERE id = ?`).get(orderId);
+  if (!order) return res.status(404).type('html').send(renderNotFoundPage());
+  if (!isAuthorizedForOrder(req, order)) return res.status(403).type('html').send(renderNotAuthorizedPage());
+
+  const items = db.prepare(`SELECT * FROM order_items WHERE order_id = ? ORDER BY id ASC`).all(order.id);
+  const settings = { businessName: getSettingValue('business_name', 'Marketia China') };
+
+  try {
+    const xlsxBuffer = await renderInvoiceXlsxBuffer(order, items, settings);
+    res.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.set('Content-Disposition', `attachment; filename="Invoice-${order.order_number}.xlsx"`);
+    res.send(xlsxBuffer);
+  } catch (err) {
+    console.error('[INVOICE XLSX] Failed to generate for download:', err.message);
     res.status(500).type('html').send(renderNotFoundPage());
   }
 });

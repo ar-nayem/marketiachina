@@ -9,11 +9,32 @@ const { decrypt } = require('./crypto');
 // changed. If no sender is active, the send is recorded as failed rather
 // than silently pretending it went out.
 
+function resolveEnvironmentSender(env = process.env) {
+  if (!env.SMTP_USER || !env.SMTP_PASS) return null;
+  return {
+    auth_mode: 'smtp',
+    gmail_address: env.SMTP_USER,
+    sender_name: env.MAIL_FROM_NAME || 'Marketia China',
+    reply_to: null,
+    smtp_host: env.SMTP_HOST || 'smtp.gmail.com',
+    smtp_port: Number(env.SMTP_PORT) || 465,
+    smtp_password: env.SMTP_PASS,
+  };
+}
+
 function getActiveSender() {
-  return db.prepare(`SELECT * FROM email_senders WHERE is_active = 1`).get() || null;
+  return db.prepare(`SELECT * FROM email_senders WHERE is_active = 1`).get() || resolveEnvironmentSender();
 }
 
 function buildTransporter(senderRow) {
+  if (senderRow.auth_mode === 'smtp') {
+    return nodemailer.createTransport({
+      host: senderRow.smtp_host,
+      port: senderRow.smtp_port,
+      secure: senderRow.smtp_port === 465,
+      auth: { user: senderRow.gmail_address, pass: senderRow.smtp_password },
+    });
+  }
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
@@ -68,7 +89,7 @@ async function attemptSend(outboxId, sender, { to, subject, html, attachments })
     const fromHeader = `"${sender.sender_name}" <${sender.gmail_address}>`;
     const info = await t.sendMail({ from: fromHeader, replyTo: sender.reply_to || undefined, to, subject, html, attachments });
     markSent.run(info.messageId || null, outboxId);
-    touchSenderLastSent.run(sender.id);
+    if (sender.id) touchSenderLastSent.run(sender.id);
     console.log(`[MAILER] Sent "${subject}" -> ${to} via ${sender.gmail_address} (mail_outbox#${outboxId})`);
     return { ok: true, messageId: info.messageId || null };
   } catch (err) {
@@ -101,4 +122,4 @@ async function sendMailAndWait({ to, subject, html, kind, relatedOrderId = null,
   return { outboxId, sender, ...outcome };
 }
 
-module.exports = { sendMail, sendMailAndWait, getActiveSender, buildTransporter };
+module.exports = { sendMail, sendMailAndWait, getActiveSender, buildTransporter, resolveEnvironmentSender };
