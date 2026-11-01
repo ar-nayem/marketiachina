@@ -18,7 +18,7 @@ export class CheckoutModal {
   constructor(modalElement) {
     this.modalElement = modalElement;
     this.isOpen = false;
-    this.step = 'gate'; // 'gate' | 'form' | 'payment-instructions' | 'confirm-form' | 'success'
+    this.step = 'gate'; // 'gate' | 'form' | 'success'
     this.isSubmitting = false;
     this.paymentMethods = [];
     this.selectedPayment = '';
@@ -28,11 +28,11 @@ export class CheckoutModal {
     this.accessToken = '';
     this.invoiceUrl = '';
     this.invoicePdfUrl = '';
+    this.invoiceXlsxUrl = '';
     this.whatsappUrl = '';
     this.errorMessage = '';
     this.confirmError = '';
     this.checkoutContext = createCartCheckoutContext(cartState);
-    this.loadPaymentMethods();
     this.render();
     this.setupListeners();
   }
@@ -87,8 +87,6 @@ export class CheckoutModal {
 
         ${this.step === 'gate' ? this.renderGate(t) : ''}
         ${this.step === 'form' ? this.renderForm(t, totals) : ''}
-        ${this.step === 'payment-instructions' ? this.renderPaymentInstructions(t) : ''}
-        ${this.step === 'confirm-form' ? this.renderConfirmForm(t) : ''}
         ${this.step === 'success' ? this.renderSuccess(t) : ''}
 
       </div>
@@ -114,19 +112,6 @@ export class CheckoutModal {
   }
 
   renderForm(t, totals) {
-    const methodOptions = this.paymentMethods.length
-      ? `
-        <div class="grid grid-cols-2 gap-2.5">
-          ${this.paymentMethods.map((m) => `
-            <label class="p-3 rounded-xl border flex items-center gap-3 cursor-pointer transition-all ${this.selectedPayment === m.key ? 'border-[#DE2910] bg-[#DE2910]/5' : 'border-[var(--border-color)]'}">
-              <input type="radio" name="payment_method" value="${m.key}" ${this.selectedPayment === m.key ? 'checked' : ''} class="text-[#DE2910]" />
-              <span class="text-xs font-bold text-[var(--text-primary)]">${METHOD_ICONS[m.key] || '💳'} ${m.name}</span>
-            </label>
-          `).join('')}
-        </div>
-      `
-      : `<p class="text-xs text-[var(--text-muted)]">${t.checkout.noActiveMethods}</p>`;
-
     return `
       <div class="space-y-6">
         <div>
@@ -156,12 +141,6 @@ export class CheckoutModal {
             <input type="text" name="customerAddress" required class="form-input" placeholder="House/Shop #, Road #, Sector, Thana, District" />
           </div>
 
-          <!-- Payment Method Selection -->
-          <div class="space-y-2 pt-2">
-            <label class="form-label">${t.checkout.paymentMethod} *</label>
-            ${methodOptions}
-          </div>
-
           <!-- Order Summary Callout -->
           <div class="p-4 rounded-xl bg-[var(--bg-tertiary)] border border-[var(--border-color)] flex items-center justify-between">
             <div>
@@ -180,7 +159,7 @@ export class CheckoutModal {
 
           <!-- Submit -->
           <p id="checkout-error" class="text-xs text-center font-semibold text-[#DE2910] ${this.errorMessage ? '' : 'hidden'}">${this.errorMessage || ''}</p>
-          <button type="submit" class="w-full btn-primary py-3.5 text-sm rounded-xl font-bold" ${this.isSubmitting || !this.paymentMethods.length ? 'disabled' : ''}>
+          <button type="submit" class="w-full btn-primary py-3.5 text-sm rounded-xl font-bold" ${this.isSubmitting ? 'disabled' : ''}>
             ${this.isSubmitting ? t.checkout.placeOrder : `${t.checkout.placeOrder} ${totals.finalTotalFormatted})`}
           </button>
         </form>
@@ -310,26 +289,21 @@ export class CheckoutModal {
   }
 
   renderSuccess(t) {
-    // Manual verification means the payment is ALWAYS pending at this
-    // screen, whether the buyer actually submitted a confirmation or chose
-    // "I'll complete payment later" - only the Owner approving in the admin
-    // dashboard ever moves it past this state.
     return `
       <div class="py-8 text-center space-y-5">
-        <div class="w-16 h-16 rounded-full bg-amber-100 text-amber-600 mx-auto flex items-center justify-center text-3xl font-black">
-          ⏳
+        <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center text-3xl font-black">
+          ✓
         </div>
         <h3 class="text-2xl font-extrabold text-[var(--text-primary)]">
-          ${t.checkout.confirmSuccessTitle}
+          ${t.checkout.successTitle}
         </h3>
         <p class="text-sm text-[var(--text-secondary)] leading-relaxed max-w-md mx-auto">
-          ${t.checkout.confirmSuccessDesc}
+          ${t.checkout.successDesc}
         </p>
 
         <div class="p-4 rounded-xl bg-[var(--bg-tertiary)] border border-[var(--border-color)] inline-block">
           <span class="text-xs text-[var(--text-muted)] block mb-1">${t.checkout.trackingNo}</span>
           <span class="text-lg font-mono font-bold text-[#DE2910]">${this.orderNumber}</span>
-          <span class="admin-badge admin-badge-gold" style="display:inline-flex;margin-top:8px;">${t.checkout.confirmPendingBadge}</span>
         </div>
 
         <div class="pt-4 flex flex-wrap justify-center gap-3">
@@ -344,6 +318,11 @@ export class CheckoutModal {
           ${this.invoicePdfUrl ? `
           <a href="${this.invoicePdfUrl}" target="_blank" rel="noopener noreferrer" class="btn-secondary text-xs px-5 py-3 flex items-center gap-2">
             <span>⬇️ ${t.checkout.downloadPdf}</span>
+          </a>
+          ` : ''}
+          ${this.invoiceXlsxUrl ? `
+          <a href="${this.invoiceXlsxUrl}" target="_blank" rel="noopener noreferrer" class="btn-secondary text-xs px-5 py-3 flex items-center gap-2">
+            <span>📊 Excel</span>
           </a>
           ` : ''}
           <button id="finish-order-btn" class="btn-secondary text-xs px-5 py-3">
@@ -500,7 +479,6 @@ export class CheckoutModal {
         phone,
         email,
         address,
-        paymentMethod: this.selectedPayment,
         shippingMethod: this.checkoutContext.shippingMethod,
         items: this.checkoutContext.items.map(item => ({ productId: item.productId, quantity: item.quantity })),
       };
@@ -528,14 +506,18 @@ export class CheckoutModal {
       this.accessToken = data.accessToken || '';
       this.invoiceUrl = data.invoiceUrl || '';
       this.invoicePdfUrl = data.invoicePdfUrl || '';
+      this.invoiceXlsxUrl = data.invoiceXlsxUrl || '';
       this.whatsappUrl = data.whatsappUrl || '';
       this.isSubmitting = false;
-      // The order itself is placed - the cart's job is done here. Payment
-      // verification is a separate step that follows.
       if (this.checkoutContext.shouldClearCart) cartState.clearCart();
       sessionStorage.removeItem(PENDING_DIRECT_CHECKOUT_KEY);
-      this.step = 'payment-instructions';
+      this.step = 'success';
       this.render();
+      try {
+        confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+      } catch (err) {
+        // ignore if script not ready
+      }
     } catch (err) {
       this.isSubmitting = false;
       this.errorMessage = err.message || langState.t.auth.errorGeneric;

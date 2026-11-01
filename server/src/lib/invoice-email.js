@@ -14,7 +14,7 @@ const MUTED = '#6b6b6b';
 const BORDER = '#e4e0d8';
 const BG_SOFT = '#fbf9f5';
 
-const PAYMENT_LABELS = { bkash: 'bKash', nagad: 'Nagad', bank: 'Bank Transfer', cod: 'Cash on Delivery' };
+const PAYMENT_LABELS = { bkash: 'bKash', nagad: 'Nagad', bank: 'Bank Transfer', cod: 'Cash on Delivery', order_only: 'Order Only - No Payment Verification' };
 const SHIPPING_LABELS = { air: 'Air Freight', sea: 'Sea Freight' };
 const STATUS_LABELS = { pending: 'Pending', confirmed: 'Confirmed', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled' };
 

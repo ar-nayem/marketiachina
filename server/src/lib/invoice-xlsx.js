@@ -117,7 +117,7 @@ async function renderInvoiceXlsxBuffer(order, items, settings = {}) {
   const details = [
     ['Invoice No.', order.order_number, 'Date', formatDate(order.created_at)],
     ['Order No.', order.order_number, 'Shipping', text(order.shipping_method).toUpperCase()],
-    ['Payment', text(order.payment_method).toUpperCase(), 'Currency', 'BDT'],
+    ['Payment', order.payment_method === 'order_only' ? 'No verification required' : text(order.payment_method).toUpperCase(), 'Currency', 'BDT'],
     ['Payment Status', text(order.payment_status).replaceAll('_', ' '), 'Status', text(order.status, 'pending').toUpperCase()],
   ];
   details.forEach((values, offset) => {

@@ -218,7 +218,7 @@ export const en = {
 
   checkout: {
     title: "Complete Your Order",
-    subtitle: "Provide delivery destination and select payment method",
+    subtitle: "Provide your delivery details — no payment verification is required",
     name: "Full Name",
     phone: "Phone Number (WhatsApp preferred)",
     email: "Email Address",
@@ -230,7 +230,7 @@ export const en = {
     preOrderNotice: "This order includes pre-order item(s) - they will ship once restocked.",
     placeOrder: "Confirm Order (Total: ",
     successTitle: "🎉 Order Successfully Placed!",
-    successDesc: "Our China logistics coordinator will contact you via WhatsApp with the tracking docket and commercial invoice.",
+    successDesc: "Your order is confirmed. The invoice and editable Excel file are being sent to your email.",
     trackingNo: "Tracking ID:",
     close: "Close",
     downloadPdf: "Download PDF",
@@ -358,6 +358,7 @@ export const en = {
       cancelled: "Cancelled"
     },
     paymentStatus: {
+      not_required: "No Payment Required",
       pending_payment: "Payment Pending",
       payment_submitted: "Payment Submitted",
       under_verification: "Under Verification",

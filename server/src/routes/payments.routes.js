@@ -77,6 +77,9 @@ const MORE_INFO_EMAIL_HTML = (order, note) => `
 // phone/email endpoint below - both resolve an order some other way, then
 // hand it to this to actually create the submission.
 function createSubmissionForOrder(order, body, file, res) {
+  if (order.payment_status === 'not_required' || order.payment_method === 'order_only') {
+    return res.status(409).json({ error: 'This order does not require payment verification.' });
+  }
   const activeBlockers = db
     .prepare(`SELECT id FROM payment_submissions WHERE order_id = ? AND status IN (${BLOCKING_SUBMISSION_STATUSES.map(() => '?').join(',')})`)
     .get(order.id, ...BLOCKING_SUBMISSION_STATUSES);

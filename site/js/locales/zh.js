@@ -218,7 +218,7 @@ export const zh = {
 
   checkout: {
     title: "填写订单与结算",
-    subtitle: "提供收货地址并选择孟加拉国付款方式",
+    subtitle: "填写收货信息 — 无需付款验证",
     name: "收货人姓名",
     phone: "联系电话 (含 WhatsApp)",
     email: "电子邮箱",
@@ -230,7 +230,7 @@ export const zh = {
     preOrderNotice: "此订单包含预订商品 — 补货后发货。",
     placeOrder: "确认提交订单 (总额: ",
     successTitle: "🎉 订单已成功提交！",
-    successDesc: "我们的中国物流专员将通过 WhatsApp / WeChat 与您对接运单号及形式发票 (PI)。",
+    successDesc: "订单已确认。发票和可编辑的 Excel 文件将发送到您的邮箱。",
     trackingNo: "国际运单编号:",
     close: "完成",
     downloadPdf: "下载 PDF",
@@ -358,6 +358,7 @@ export const zh = {
       cancelled: "已取消"
     },
     paymentStatus: {
+      not_required: "无需付款",
       pending_payment: "待付款",
       payment_submitted: "付款已提交",
       under_verification: "核实中",

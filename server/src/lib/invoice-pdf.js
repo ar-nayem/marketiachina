@@ -24,7 +24,7 @@ const MARGIN_X = 40;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_X * 2;
 const BOTTOM_LIMIT = PAGE_HEIGHT - 60;
 
-const PAYMENT_LABELS = { bkash: 'bKash', nagad: 'Nagad', bank: 'Bank Transfer', cod: 'Cash on Delivery' };
+const PAYMENT_LABELS = { bkash: 'bKash', nagad: 'Nagad', bank: 'Bank Transfer', cod: 'Cash on Delivery', order_only: 'Order Only - No Payment Verification' };
 const SHIPPING_LABELS = { air: 'Air Freight', sea: 'Sea Freight' };
 const STATUS_LABELS = { pending: 'Pending', confirmed: 'Confirmed', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled' };
 

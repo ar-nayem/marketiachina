@@ -7,6 +7,7 @@ const PAYMENT_LABELS = {
   nagad: 'Nagad',
   bank: 'Bank Transfer',
   cod: 'Cash on Delivery',
+  order_only: 'Order Only — No Payment Verification',
 };
 
 const SHIPPING_LABELS = {

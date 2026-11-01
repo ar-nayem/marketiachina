@@ -12,14 +12,11 @@ const { buildInvoiceAttachments } = require('../lib/invoice-attachments');
 const { notifyTelegram } = require('../lib/telegram');
 const { computeStockStatus } = require('../lib/stock');
 const { normalizeUnitWeight, calculateWeightBasedShipping } = require('../lib/shipping-weight');
+const { resolveOrderOnlyPayment } = require('../lib/order-only-payment');
 
 const router = express.Router();
 
 const SHIPPING_METHODS = ['air', 'sea'];
-
-function getActivePaymentMethodKeys() {
-  return db.prepare(`SELECT key FROM payment_methods WHERE status = 'active' ORDER BY sort_order ASC`).all().map((r) => r.key);
-}
 
 // Orders past this point in the payment-verification flow are effectively
 // resolved - a stale payment_expires_at should no longer flip their display
@@ -108,14 +105,10 @@ function renderNotFoundPage() {
 }
 
 router.post('/', attachCustomerIfPresent, (req, res) => {
-  const { name, phone, email, address, paymentMethod, shippingMethod, items, promoCode } = req.body || {};
+  const { name, phone, email, address, shippingMethod, items, promoCode } = req.body || {};
 
   if (!name || !phone || !isValidEmail(email) || !address) {
     return res.status(400).json({ error: 'Name, phone, a valid email, and address are required.' });
-  }
-  const activePaymentMethods = getActivePaymentMethodKeys();
-  if (!activePaymentMethods.includes(paymentMethod)) {
-    return res.status(400).json({ error: `Payment method must be one of: ${activePaymentMethods.join(', ')}.` });
   }
   if (!SHIPPING_METHODS.includes(shippingMethod)) {
     return res.status(400).json({ error: `Shipping method must be one of: ${SHIPPING_METHODS.join(', ')}.` });
@@ -180,19 +173,14 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
   const accessToken = crypto.randomBytes(24).toString('hex');
   const customerId = req.customer ? req.customer.id : null;
 
-  // Optional, Owner-configured payment deadline (hours from now). Blank/0 -
-  // the default - means orders never expire.
-  const paymentExpiryHours = Number(getSettingValue('payment_expiry_hours', 0)) || 0;
-  const paymentExpiresAt = paymentExpiryHours > 0
-    ? new Date(Date.now() + paymentExpiryHours * 3600 * 1000).toISOString().slice(0, 19).replace('T', ' ')
-    : null;
+  const payment = resolveOrderOnlyPayment();
 
   const insertOrderStmt = db.prepare(`
     INSERT INTO orders (
       order_number, access_token, customer_id, customer_name, customer_phone, customer_email,
       shipping_address, payment_method, shipping_method, subtotal_bdt, discount_bdt, shipping_fee_bdt,
       total_weight_kg, shipping_rate_bdt_per_kg, total_bdt, promo_code, status, payment_status, payment_expires_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending_payment', ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
   `);
 
   let order = null;
@@ -202,8 +190,8 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
     try {
       const result = insertOrderStmt.run(
         orderNumber, accessToken, customerId, name, phone, email, address,
-        paymentMethod, shippingMethod, subtotalBDT, discountBDT, shippingFeeBDT, totalWeightKg, shippingRateBDTPerKg, totalBDT,
-        promoCode || null, paymentExpiresAt
+        payment.paymentMethod, shippingMethod, subtotalBDT, discountBDT, shippingFeeBDT, totalWeightKg, shippingRateBDTPerKg, totalBDT,
+        promoCode || null, payment.paymentStatus, payment.paymentExpiresAt
       );
       order = db.prepare(`SELECT * FROM orders WHERE id = ?`).get(result.lastInsertRowid);
       break;
@@ -270,7 +258,7 @@ router.post('/', attachCustomerIfPresent, (req, res) => {
       `${name} — ${phone}\n` +
       `${email}\n\n` +
       `${itemsSummary}\n\n` +
-      `Total: ৳${totalBDT.toLocaleString()} (${paymentMethod.toUpperCase()}, ${shippingMethod} freight)\n` +
+      `Total: ৳${totalBDT.toLocaleString()} (ORDER ONLY, ${shippingMethod} freight)\n` +
       `Address: ${address}`
   );
 
